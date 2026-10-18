@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b121a">
+<meta name="apple-mobile-web-app-title" content="Crew Hub">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Crew Hub</title>
+<style>
+  :root{
+    --bg:#0b121a;
+    --panel:#121b26;
+    --panel-hi:#182433;
+    --line:#243140;
+    --text:#e8eef4;
+    --dim:#8c9aa8;
+    --amber:#ffb300;
+    --sky:#38bdf8;
+    --teal:#4fc3b5;
+    --lime:#9be564;
+    --ok:#3fb950;
+    --off:#e0a43a;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:"Avenir Next","Avenir",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:calc(28px + env(safe-area-inset-top,0px)) 18px calc(32px + env(safe-area-inset-bottom,0px));
+    min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:30px}
+  h1{margin:0;font-size:40px;line-height:1;font-weight:700;letter-spacing:-.02em}
+  .sub{margin:8px 0 0;color:var(--dim);font-size:16px}
+  .status{
+    display:flex;align-items:center;gap:8px;flex:0 0 auto;
+    padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);
+    font-size:14px;color:var(--dim);
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(63,185,80,.18)}
+  .status.offline .dot{background:var(--off);box-shadow:0 0 0 3px rgba(224,164,58,.2)}
+  .status.offline{color:var(--text)}
+
+  h2{margin:34px 0 4px;font-size:20px;font-weight:650;letter-spacing:-.005em}
+  .note{margin:0 0 14px;color:var(--dim);font-size:15px}
+
+  .tiles{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+  .tiles.single{grid-template-columns:1fr}
+  .tile{
+    position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:26px;
+    min-height:150px;padding:18px 18px 16px 22px;border-radius:16px;
+    background:var(--panel);border:1px solid var(--line);color:var(--text);text-decoration:none;
+    overflow:hidden;-webkit-tap-highlight-color:transparent;
+  }
+  .tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
+  .tile:active{background:var(--panel-hi)}
+  .tile:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+  .tile svg{width:34px;height:34px;stroke:var(--c);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .tile .name{font-size:22px;font-weight:650;letter-spacing:-.01em;line-height:1.15}
+  .tile .what{margin-top:5px;font-size:15px;color:var(--dim);line-height:1.35}
+  .fuel{--c:var(--amber)} .hobbs{--c:var(--sky)} .tcoord{--c:var(--teal)} .fbo{--c:var(--lime)}
+
+  .tiles.trip-pair .tile{min-height:132px}
+
+  .trips{display:grid;gap:8px;margin-bottom:12px}
+  .trip{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+  .trip.on{border-color:#6b5420;background:#171d22}
+  .trip-pick{flex:1;min-width:0;text-align:left;padding:12px 14px;background:none;border:0;color:var(--text);font:inherit;min-height:64px;display:flex;gap:12px;align-items:center}
+  .trip-pick:focus-visible{outline:3px solid var(--amber);outline-offset:-3px}
+  .radio{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--dim);display:grid;place-items:center}
+  .trip.on .radio{border-color:var(--amber)}
+  .trip.on .radio::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--amber)}
+  .t-main{min-width:0}
+  .t-top{font-size:17px;font-weight:650;letter-spacing:-.005em}
+  .t-sub{margin-top:2px;font-size:14px;color:var(--dim);line-height:1.35}
+  .trip-x{flex:0 0 auto;padding:0 14px;background:none;border:0;border-left:1px solid var(--line);color:var(--dim);font:inherit;font-size:14px;min-width:78px}
+  .trip-x:active{background:var(--panel-hi)}
+  .trip-x.arm{color:#ff8a7a}
+  .empty{padding:14px 16px;border:1px dashed var(--line);border-radius:14px;color:var(--dim);font-size:15px;line-height:1.45}
+  .import-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .btn{min-height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--amber);background:transparent;color:var(--amber);font:inherit;font-size:16px;font-weight:600}
+  .btn:active{background:#1c1a10}
+  .btn[disabled]{opacity:.45;border-color:var(--line);color:var(--dim)}
+  #importMsg{font-size:14px;color:var(--dim);flex:1 1 200px}
+  #importMsg.err{color:#ff8a7a}
+  #importMsg.ok{color:var(--ok)}
+  .install{
+    display:none;margin-top:34px;padding:14px 16px;border-radius:12px;border:1px dashed var(--line);
+    color:var(--dim);font-size:15px;line-height:1.45;
+  }
+  .install strong{color:var(--text);font-weight:600}
+  footer{margin-top:30px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--dim);font-size:13px}
+  footer button{
+    background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;
+    padding:8px 12px;font:inherit;min-height:40px;
+  }
+  footer button:active{background:var(--panel)}
+
+  @media (max-width:560px){
+    h1{font-size:34px}
+    header{flex-direction:column;align-items:flex-start;gap:14px}
+    .tiles{grid-template-columns:1fr}
+    .tile{min-height:0;flex-direction:row;align-items:center;gap:16px}
+    .tile .top{order:2;flex:1}
+    .tile svg{order:1;flex:0 0 auto}
+  }
+  @media (min-width:561px){ .tile .top{order:2} }
+  @media (prefers-reduced-motion:no-preference){
+    .tile{transition:background .12s}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Crew Hub</h1>
+      <p class="sub">Pick a tool. Home brings you back here.</p>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">Checking…</span></div>
+  </header>
+
+  <h2 style="margin-top:0">Trips</h2>
+  <p class="note">Import up to 3 trip sheets. The selected trip loads into every tool.</p>
+  <div class="trips" id="tripList"></div>
+  <div class="import-row">
+    <button type="button" class="btn" id="importBtn">Import trip sheet</button>
+    <span id="importMsg" role="status" aria-live="polite"></span>
+  </div>
+  <input type="file" id="tripFile" accept="application/pdf" hidden>
+
+  <h2>In the cockpit</h2>
+  <p class="note">Saved on this device. Works with no signal.</p>
+  <div class="tiles">
+    <a class="tile fuel" href="crew-tools.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3.2 4 5.5 6.9 5.5 10a5.5 5.5 0 0 1-11 0C6.5 9.9 8.8 7 12 3z"/><path d="M9.5 14a2.6 2.6 0 0 0 2.5 2.4"/></svg>
+      <span class="top"><span class="name">Fuel burn</span><div class="what">Burn, remaining and per-leg totals</div></span>
+    </a>
+    <a class="tile hobbs" href="oooi.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 13V8.5M12 13l3 2M9.5 2.8h5"/></svg>
+      <span class="top"><span class="name">Hobbs · OOOI</span><div class="what">Out, off, on, in with Hobbs times</div></span>
+    </a>
+  </div>
+
+  <h2>Trip planning</h2>
+  <p class="note">Needs a connection. PDF trip sheets are read on your device.</p>
+  <div class="tiles">
+    <a class="tile tcoord" href="trip-coordination.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="18" r="2"/><circle cx="18.5" cy="6" r="2"/><path d="M7.4 17.2C12 15.5 8 9 16.6 6.8"/></svg>
+      <span class="top"><span class="name">Trip coordination</span><div class="what">International trip request from your trip sheet</div></span>
+    </a>
+    <a class="tile fbo" href="fbo-fuel.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7l8.5 6.2L20.5 7"/></svg>
+      <span class="top"><span class="name">FBO &amp; fuel release</span><div class="what">Arrival emails and World Fuel or AvFuel releases</div></span>
+    </a>
+  </div>
+
+  <div class="install" id="install">
+    <strong>Put it on your Home Screen.</strong> In Safari tap Share, then Add to Home Screen. Open it once with signal so the cockpit tools are saved for offline use.
+  </div>
+
+  <footer>
+    <span id="ver">Hub 1.1.0</span>
+    <button type="button" id="refresh">Update this copy</button>
+  </footer>
+</div>
+
+<script src="pdf.min.js"></script>
+<script src="hub-trips.js"></script>
+<script>
+(function(){
+  var VERSION='1.1.0';
+  var st=document.getElementById('status'), tx=document.getElementById('statusText');
+  var ready=false;
+
+  function paint(){
+    if(!navigator.onLine){
+      st.classList.add('offline');
+      tx.textContent = ready ? 'Offline · cockpit tools ready' : 'Offline · open once with signal first';
+    } else {
+      st.classList.remove('offline');
+      tx.textContent = ready ? 'Online · saved for offline' : 'Online';
+    }
+  }
+  window.addEventListener('online',paint); window.addEventListener('offline',paint);
+  paint();
+
+
+  // ---------- Trips ----------
+  var listEl=document.getElementById('tripList'), msgEl=document.getElementById('importMsg');
+  var armed=null, armTimer=null;
+  function esc(t){ return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function renderTrips(){
+    var trips=HubTrips.list(), act=HubTrips.active();
+    if(!trips.length){ listEl.innerHTML='<div class="empty">No trips yet. Import a trip sheet PDF and every tool will pick it up.</div>'; }
+    else listEl.innerHTML=trips.map(function(t){
+      var on=act&&act.id===t.id, legs=t.legs.length;
+      return '<div class="trip'+(on?' on':'')+'" data-id="'+esc(t.id)+'">'+
+        '<button type="button" class="trip-pick" role="radio" aria-checked="'+(on?'true':'false')+'"><span class="radio"></span>'+
+        '<span class="t-main"><div class="t-top">'+esc(t.dateLabel)+(t.tail?' \u00b7 '+esc(t.tail):'')+'</div>'+
+        '<div class="t-sub">'+esc(t.route)+(t.tripNum?' \u00b7 '+esc(t.tripNum):'')+'</div></span></button>'+
+        '<button type="button" class="trip-x" aria-label="Remove '+esc(t.dateLabel+(t.tail?' '+t.tail:''))+'">Remove</button></div>';
+    }).join('');
+    document.getElementById('importBtn').disabled = false;
+  }
+  listEl.addEventListener('click',function(e){
+    var row=e.target.closest('.trip'); if(!row) return;
+    var id=row.getAttribute('data-id');
+    if(e.target.closest('.trip-x')){
+      var b=e.target.closest('.trip-x');
+      if(armed===id){ clearTimeout(armTimer); armed=null; HubTrips.remove(id); setMsg('Removed.','ok'); renderTrips(); }
+      else { armed=id; b.textContent='Tap again'; b.classList.add('arm'); clearTimeout(armTimer);
+        armTimer=setTimeout(function(){ armed=null; renderTrips(); },3000); }
+      return;
+    }
+    HubTrips.setActive(id); renderTrips();
+  });
+  function setMsg(t,cls){ msgEl.textContent=t; msgEl.className=cls||''; }
+  document.getElementById('importBtn').addEventListener('click',function(){ document.getElementById('tripFile').click(); });
+  document.getElementById('tripFile').addEventListener('change',function(e){
+    var f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+    setMsg('Reading trip sheet\u2026');
+    HubTrips.importFile(f).then(function(r){
+      if(r.ok){ setMsg((r.replaced?'Updated ':'Imported ')+(r.trip.tripNum||'trip')+'. It is now the active trip.','ok'); }
+      else setMsg(r.message,'err');
+      renderTrips();
+    });
+  });
+  window.addEventListener('hubtrips',renderTrips);
+  renderTrips();
+
+  var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  if(!standalone){ document.getElementById('install').style.display='block'; }
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      return navigator.serviceWorker.ready;
+    }).then(function(){
+      return caches.keys();
+    }).then(function(keys){
+      ready = keys.some(function(k){ return k==='crew-hub-'+VERSION; });
+      // cache is filled on install; confirm the core page is in it
+      if(ready){ return caches.open('crew-hub-'+VERSION).then(function(c){ return c.match('crew-tools.html'); }).then(function(r){ ready=!!r; }); }
+    }).then(paint).catch(function(){ paint(); });
+  }
+
+  document.getElementById('ver').textContent='Hub '+VERSION;
+  var refreshBtn=document.getElementById('refresh');
+  function paintRefresh(){
+    var off=!navigator.onLine;
+    refreshBtn.disabled=off;
+    refreshBtn.textContent = off ? 'Update needs signal' : 'Update this copy';
+  }
+  window.addEventListener('online',paintRefresh); window.addEventListener('offline',paintRefresh);
+  paintRefresh();
+  refreshBtn.addEventListener('click',function(){
+    if(!navigator.onLine){ paintRefresh(); return; }
+    refreshBtn.disabled=true; refreshBtn.textContent='Checking\u2026';
+    // Make sure the server really answers before anything saved is cleared.
+    fetch('index.html?u='+Date.now(),{cache:'no-store'}).then(function(r){
+      if(!r.ok) throw new Error('bad');
+      refreshBtn.textContent='Updating\u2026';
+      return caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })
+        .then(function(){ return navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : []; })
+        .then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); })
+        .then(function(){ location.reload(); });
+    }).catch(function(){
+      refreshBtn.textContent='No connection. Nothing changed.';
+      setTimeout(paintRefresh,2500);
+    });
+  });
+})();
+</script>
+</body>
+</html>

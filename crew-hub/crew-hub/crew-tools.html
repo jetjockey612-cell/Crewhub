@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d1117">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Fuel Burn</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#151b23;
+    --panel-border:#26303b;
+    --amber:#ffb300;
+    --amber-dim:#8a6200;
+    --text:#e6edf3;
+    --text-dim:#8b98a5;
+    --green:#3fb950;
+    --red:#f85149;
+    --input-bg:#0a0e13;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+    -webkit-text-size-adjust:100%;
+  }
+  .mono{ font-family:"SF Mono", "Menlo", "Consolas", monospace; }
+  .wrap{ max-width:1100px; margin:0 auto; }
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  h1{
+    font-size:19px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin:0;
+    color:var(--amber);
+    font-weight:700;
+  }
+  h1 span{ color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0; font-size:13px; display:block; margin-top:2px;}
+
+  button.clear{
+    background:transparent;
+    border:1px solid var(--red);
+    color:var(--red);
+    padding:9px 16px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  button.clear:active{ background:var(--red); color:#0d1117; }
+  button.clear.confirming{ background:var(--red); color:#0d1117; }
+
+  .tail-toggles{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .tail-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:var(--input-bg);
+    border:1px solid var(--panel-border);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:12px;
+    font-family:"SF Mono","Menlo","Consolas",monospace;
+    cursor:pointer;
+    user-select:none;
+    color:var(--text-dim);
+  }
+  .tail-chip input{
+    width:14px;
+    height:14px;
+    padding:0;
+    accent-color:var(--amber);
+  }
+  .tail-chip.on{
+    border-color:var(--amber-dim);
+    color:var(--text);
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:14px;
+    margin-bottom:16px;
+    overflow-x:auto;
+  }
+  .panel h2{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--amber);
+    margin:0 0 10px 0;
+    font-weight:700;
+  }
+  table{ border-collapse:collapse; width:100%; min-width:560px; }
+  th,td{
+    padding:6px 6px;
+    text-align:center;
+    font-size:13px;
+    white-space:nowrap;
+  }
+  th{
+    color:var(--text-dim);
+    font-weight:600;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    border-bottom:1px solid var(--panel-border);
+  }
+  td.label{ color:var(--text-dim); text-align:left; font-size:12px; }
+  tr + tr td{ border-top:1px solid #1c232c; }
+
+  input{
+    width:64px;
+    background:var(--input-bg);
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:6px 4px;
+    border-radius:5px;
+    font-size:13px;
+    text-align:center;
+    font-family:inherit;
+  }
+  input:focus{
+    outline:none;
+    border-color:var(--amber);
+  }
+  input.txt{ width:52px; text-transform:uppercase; }
+  input.wide{ width:78px; }
+
+  .computed{
+    font-weight:600;
+    display:inline-block;
+    min-width:52px;
+    padding:2px 6px;
+    border-radius:4px;
+  }
+  .computed.ok{
+    color:#1a7a35;
+    background:#c6efce;
+  }
+  .computed.neg{
+    color:#9c0006;
+    background:#ffc7ce;
+  }
+  .computed.over{
+    color:#9c0006;
+    background:#ffc7ce;
+  }
+
+  footer{
+    color:var(--text-dim);
+    font-size:11px;
+    text-align:center;
+    margin-top:6px;
+    line-height:1.5;
+  }
+
+  /* When only one aircraft is visible, keep tables compact and left-aligned */
+  .single-tail table{
+    min-width:0;
+    width:auto;
+    max-width:100%;
+  }
+
+  /* App switcher */
+  .app-switch{display:flex;gap:8px;margin-bottom:16px;margin-top:8px}
+  body[data-mode] #tabFuel, body[data-mode] #tabHobbs{display:none}
+  .app-switch .mode-title{flex:1;display:flex;align-items:center;padding:0 4px;font-size:19px;font-weight:700}
+  .plan-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .plan-row select{flex:1 1 200px;min-width:0;min-height:44px;font-size:16px;padding:0 10px;border-radius:8px;border:1px solid var(--panel-border);background:var(--bg);color:var(--text)}
+  .plan-row label{font-size:13px;color:var(--text-dim);display:flex;align-items:center;gap:6px}
+  .plan-row input{width:56px;min-height:44px;font-size:16px;text-align:center;border-radius:8px;border:1px solid var(--panel-border);background:var(--bg);color:var(--text)}
+  #planLine{margin-top:10px}
+  .app-switch .hub-home{flex:0 0 auto;display:flex;align-items:center;padding:0 16px;border:1px solid var(--panel-border);border-radius:10px;background:var(--panel);color:var(--text);font-weight:600;font-size:15px;text-decoration:none;min-height:44px}
+  .app-switch .hub-home:active{background:#1d2631}
+  .app-switch button{
+    flex:1;border:1px solid var(--panel-border);background:var(--panel);color:var(--text-dim);
+    border-radius:10px;padding:14px 12px;font-size:14px;font-weight:700;cursor:pointer;
+    letter-spacing:0.02em;
+  }
+  .app-switch button.active-fuel{border-color:var(--amber-dim);color:var(--amber);background:#1a1508}
+  .app-switch button.active-hobbs{border-color:#1a6a8a;color:#38bdf8;background:#0c1a22}
+  .view{display:none}
+  .view.on{display:block}
+  .btn-next{
+    background:transparent;border:1px solid #38bdf8;color:#38bdf8;
+    padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;
+    letter-spacing:0.03em;text-transform:uppercase;cursor:pointer;
+  }
+  .btn-next.confirming{background:#38bdf8;color:#0d1117}
+
+
+  /* Polished Hobbs OOOI (from standalone) */
+  .hobbs-sky{color:#38bdf8}
+  .pill-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .pill-box{background:var(--input-bg);border-radius:14px;padding:14px 12px;text-align:center;border:1px solid var(--panel-border)}
+  .pill-box .pval{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+  .pill-box .plbl{font-size:11px;color:var(--text-dim);margin-top:4px;font-weight:500}
+  .pill-box.flight .pval{color:#38bdf8}
+  .pill-box.block .pval{color:var(--amber)}
+  .taxi-row{display:flex;align-items:center;gap:12px;margin-top:8px;padding-top:12px;border-top:1px solid var(--panel-border);flex-wrap:wrap}
+  .taxi-row .taxi-hint{font-size:11px;color:var(--text-dim);flex:1;min-width:140px;line-height:1.4}
+  .timeline{position:relative;margin-top:8px}
+  .timeline::before{content:'';position:absolute;left:15px;top:22px;bottom:22px;width:2px;background:linear-gradient(to bottom,#38bdf8,#3fb950);border-radius:2px;opacity:0.45}
+  .oooi-row{display:flex;align-items:center;gap:12px;padding:10px 0}
+  .oooi-dot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0;z-index:1;letter-spacing:0.02em}
+  .oooi-dot.out,.oooi-dot.off{background:rgba(56,189,248,0.15);color:#38bdf8}
+  .oooi-dot.on,.oooi-dot.in{background:rgba(63,185,80,0.15);color:#3fb950}
+  .oooi-name{width:32px;font-size:12px;font-weight:600;color:var(--text-dim)}
+  .oooi-fields{display:flex;align-items:center;gap:6px;flex:1}
+  .oooi-fields input{width:48px;padding:10px 4px;font-size:17px;border-radius:10px;font-weight:700}
+  .oooi-fields .sep{color:var(--text-dim);font-weight:700}
+  .oooi-fields .zulu{color:var(--text-dim);font-size:12px;font-weight:700}
+  .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .check-item{background:var(--input-bg);border-radius:12px;padding:12px;text-align:center;border:1px solid var(--panel-border)}
+  .check-item .cval{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .check-item .clbl{font-size:10px;color:var(--text-dim);margin-top:3px;text-transform:uppercase;letter-spacing:0.04em}
+  .check-item.match .cval{color:#3fb950}
+  .check-item.mismatch .cval{color:var(--red)}
+  .check-status{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:500;text-align:center;line-height:1.4}
+  .check-status.ok{background:rgba(63,185,80,0.12);color:#3fb950}
+  .check-status.warn{background:rgba(255,179,0,0.12);color:var(--amber)}
+  .check-status.bad{background:rgba(248,81,73,0.12);color:var(--red)}
+  .check-status.idle{background:rgba(255,255,255,0.04);color:var(--text-dim)}
+  .hobbs-hint{font-size:11px;color:var(--text-dim);text-align:center;margin-top:8px;line-height:1.45}
+
+
+  input.tko-manual, .tko-manual{
+    border-color: var(--amber) !important;
+    box-shadow: 0 0 0 1px var(--amber-dim);
+    background: #1a1508;
+  }
+  .tko-manual-tag{
+    font-size:9px;
+    color:var(--amber);
+    font-weight:700;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    display:block;
+    margin-top:2px;
+  }
+
+
+  .app-version{
+    position:fixed;
+    top:calc(28px + env(safe-area-inset-top, 0px));
+    right:28px;
+    font-size:10px;
+    font-weight:600;
+    color:var(--text-dim);
+    opacity:0.7;
+    letter-spacing:0.04em;
+    z-index:50;
+    pointer-events:none;
+  }
+
+
+  .fuel-toolbar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  button.hist{
+    background:transparent;
+    border:1px solid var(--panel-border);
+    color:var(--text-dim);
+    padding:11px 16px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    min-height:40px;
+  }
+  button.hist:disabled{
+    opacity:0.35;
+    cursor:default;
+  }
+  button.hist:not(:disabled):active{
+    border-color:var(--amber-dim);
+    color:var(--amber);
+  }
+
+
+  .topoff-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+    align-items:center;
+  }
+  .topoff-row .topoff-btn{
+    background:transparent;
+    border:1px solid var(--amber-dim);
+    color:var(--amber);
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .topoff-row .topoff-btn:active{
+    background:var(--amber);
+    color:#0d1117;
+  }
+  .topoff-leg-picker{
+    display:none;
+    margin-top:10px;
+    padding:10px;
+    background:var(--input-bg);
+    border:1px solid var(--panel-border);
+    border-radius:8px;
+  }
+  .topoff-leg-picker.on{display:block}
+  .topoff-leg-picker .tp-label{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .topoff-leg-picker .tp-legs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .topoff-leg-picker button.leg-pick{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:8px 12px;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    min-width:44px;
+    opacity:1;
+  }
+  .topoff-leg-picker button.leg-pick:active{
+    border-color:var(--amber);
+    color:var(--amber);
+  }
+  .topoff-leg-picker button.leg-pick.muted{
+    color:var(--text-dim);
+    opacity:0.4;
+  }
+
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:calc(24px + env(safe-area-inset-bottom, 0px));
+    transform:translateX(-50%) translateY(120%);
+    background:#1c2330;
+    border:1px solid var(--amber-dim);
+    color:var(--text);
+    padding:12px 16px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+    z-index:100;
+    max-width:90%;
+    text-align:center;
+    transition:transform 0.25s ease, opacity 0.25s ease;
+    opacity:0;
+    pointer-events:none;
+  }
+  .toast.on{ transform:translateX(-50%) translateY(0); opacity:1; }
+  .toast.warn{ border-color:var(--red); color:#ffb4b0; }
+  tr.leg-collapsed{ display:none; }
+  #payloadBody input[data-role="pax"],
+  #payloadBody input[data-role="bags"]{
+    width:52px;
+    min-width:52px;
+  }
+  .legs-toggle{
+    background:transparent;
+    border:1px solid var(--panel-border);
+    color:var(--text-dim);
+    padding:6px 12px;
+    border-radius:6px;
+    font-size:11px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:8px;
+  }
+
+
+
+
+  .uplift-calc{
+    display:none;
+    margin-top:10px;
+    padding:12px;
+    background:var(--input-bg);
+    border:1px solid var(--panel-border);
+    border-radius:8px;
+  }
+  .uplift-calc.on{display:block}
+  .uplift-calc .uc-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .uplift-calc label{
+    display:block;
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
+  .uplift-calc input{
+    width:100%;
+    font-size:16px;
+    padding:10px;
+  }
+  .uplift-calc .uc-result{
+    text-align:center;
+    padding:10px;
+    margin-bottom:10px;
+    border-radius:8px;
+    background:rgba(255,179,0,0.08);
+    border:1px solid var(--amber-dim);
+  }
+  .uplift-calc .uc-result .uc-gal{
+    font-size:22px;
+    font-weight:700;
+    color:var(--amber);
+    font-family:"SF Mono",Menlo,Consolas,monospace;
+  }
+  .uplift-calc .uc-result .uc-sub{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+  .uplift-calc .uc-legs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:8px;
+  }
+  .uplift-calc .uc-hint{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+  }
+
+</style>
+<script src="pdf.min.js"></script>
+<script src="hub-trips.js"></script>
+</head>
+<body data-mode="fuel">
+<div class="app-version" id="appVersion">v3.0</div>
+<div class="toast" id="toast"></div>
+<div class="wrap">
+
+  <div class="app-switch">
+    <a href="index.html" class="hub-home" aria-label="Back to Crew Hub">&#8249; Home</a>
+    <span class="mode-title" id="modeTitle">Fuel Burn</span>
+    <button type="button" id="tabFuel" class="active-fuel">Fuel Burn</button>
+    <button type="button" id="tabHobbs">Hobbs · OOOI</button>
+  </div>
+
+  <div id="viewFuel" class="view on">
+  <header>
+    <h1>Fuel Burn Calculator<span>Route / payload / limits</span></h1>
+    <div class="fuel-toolbar">
+      <button type="button" class="hist" id="undoBtn" disabled title="Undo">Undo</button>
+      <button type="button" class="hist" id="redoBtn" disabled title="Redo">Redo</button>
+      <button type="button" class="hist" id="shareBtn" title="Share plan">Share</button>
+      <button type="button" class="hist" id="importBtn" title="Import trip sheet PDF">Import PDF</button>
+      <input type="file" id="importFile" accept="application/pdf" style="display:none">
+      <button class="clear" id="clearBtn">Clear</button>
+    </div>
+  </header>
+
+  <div id="fuelTripBar"></div>
+
+  <div class="panel" id="tailPicker">
+    <h2>Aircraft Shown</h2>
+    <div class="tail-toggles" id="tailToggles"></div>
+    <div class="topoff-row" id="topoffRow"></div>
+    <div class="topoff-leg-picker" id="topoffPicker">
+      <div class="tp-label" id="topoffPickerLabel">Top off — which leg?</div>
+      <div class="tp-legs" id="topoffLegBtns"></div>
+    </div>
+    <div class="uplift-calc" id="upliftCalc">
+      <div class="uc-grid">
+        <div>
+          <label>Current lbs</label>
+          <input id="ucCurrent" inputmode="decimal" placeholder="0" autocomplete="off">
+        </div>
+        <div>
+          <label>Required lbs</label>
+          <input id="ucRequired" inputmode="decimal" placeholder="0" autocomplete="off">
+        </div>
+      </div>
+      <div class="uc-result">
+        <div class="uc-gal" id="ucGalOut">—</div>
+        <div class="uc-sub" id="ucLbsOut">Gallons to add (÷ 6.7)</div>
+      </div>
+      <div class="uc-hint">Send uplift to leg:</div>
+      <div class="uc-legs" id="ucLegBtns"></div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="leg-pick muted" id="ucClear">Clear</button>
+        <button type="button" class="leg-pick muted" id="ucClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="importPreviewPanel" style="display:none;">
+    <h2>Import Preview</h2>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;" id="importTailLine"></div>
+    <table class="mono">
+      <thead>
+        <tr><th>Leg</th><th>From</th><th>To</th><th>Pax</th></tr>
+      </thead>
+      <tbody id="importPreviewBody"></tbody>
+    </table>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.45;">
+      Check the codes above — trip sheet layouts vary and parsing can miss. Edit any cell before applying.<br>
+      Applying fills From/To/Pax only for these legs; fuel, takeoff weights and other aircraft are left as-is.
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button type="button" class="hist" id="importApplyBtn">Apply to Route</button>
+      <button type="button" class="hist" id="importCancelBtn">Cancel</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Route &amp; Fuel</h2>
+    <table class="mono">
+      <thead>
+        <tr>
+          <th>From</th><th>To</th><th>Gal</th><th>Lbs</th><th>Takeoff</th><th>Burn</th><th>Landing</th>
+        </tr>
+      </thead>
+      <tbody id="routeBody"></tbody>
+    </table>
+    <button type="button" class="legs-toggle" id="legsToggleBtn">Show legs 3–6</button>
+  </div>
+
+  <div class="panel" id="totalsPanel">
+    <h2>Total T/O and LDG Weights</h2>
+    <table class="mono">
+      <thead>
+        <tr id="totalsHeadRow"></tr>
+      </thead>
+      <tbody id="totalsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="payloadPanel">
+    <h2>Available Payloads</h2>
+    <table class="mono">
+      <thead>
+        <tr id="payloadHeadRow"></tr>
+      </thead>
+      <tbody id="payloadBody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="limitsPanel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+      <h2 style="margin:0;">Aircraft Limits</h2>
+      <button id="unlockLimitsBtn" style="background:transparent; border:1px solid var(--amber-dim); color:var(--amber); padding:6px 12px; border-radius:6px; font-size:11px; font-weight:600; letter-spacing:0.03em; text-transform:uppercase; cursor:pointer;">Unlock to Edit</button>
+    </div>
+    <table class="mono">
+      <thead><tr id="limitsHeadRow"><th></th></tr></thead>
+      <tbody id="limitsBody"></tbody>
+    </table>
+  </div>
+
+  </div><!-- /viewFuel -->
+
+  <div id="viewHobbs" class="view">
+  <div id="hobbsTripBar"></div>
+  <div class="hb" id="planBox" style="display:none;margin-top:-6px">
+    <div class="plan-row" style="margin-top:0">
+      <select id="legSel" aria-label="Trip leg"></select>
+      <label>Flag if off by <input id="eteThr" value="0.3" inputmode="decimal" aria-label="Flag threshold in hours"> hr</label>
+    </div>
+    <div class="check-status idle" id="planLine">Pick a leg to compare with the trip sheet ETE.</div>
+  </div>
+
+  <div class="panel" id="hobbsPanel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+      <h2 style="margin:0;" class="hobbs-sky">Hobbs · OOOI</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-next" id="nextLegBtn">Next Leg</button>
+        <button class="clear" id="clearHobbsBtn" style="padding:6px 12px; font-size:11px;">Clear Hobbs</button>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;font-weight:700;">Hobbs</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Start</div>
+        <input class="wide" id="hobbsStart" placeholder="0.0" inputmode="decimal" style="width:100%;font-size:18px;padding:12px;">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Stop</div>
+        <input class="wide" id="hobbsStop" placeholder="0.0" inputmode="decimal" style="width:100%;font-size:18px;padding:12px;">
+      </div>
+    </div>
+    <div class="pill-row">
+      <div class="pill-box flight">
+        <div class="pval" id="flightTime">—</div>
+        <div class="plbl">Flight (Hobbs)</div>
+      </div>
+      <div class="pill-box block">
+        <div class="pval" id="blockTime">—</div>
+        <div class="plbl">Block (F + taxi)</div>
+      </div>
+    </div>
+    <div class="taxi-row">
+      <div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Taxi allow (hr)</div>
+        <input class="wide" id="taxiAllow" value="0.2" inputmode="decimal" style="width:100px;">
+      </div>
+      <div class="taxi-hint">Default 0.2 hr split evenly out/in. Edit if your taxi is different.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 style="margin:0 0 10px 0;">OOOI · Zulu</h2>
+    <div class="timeline">
+      <div class="oooi-row">
+        <div class="oooi-dot out">OUT</div>
+        <div class="oooi-name">Out</div>
+        <div class="oooi-fields">
+          <input data-oooi="out-hh" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="sep">:</span>
+          <input data-oooi="out-mm" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="zulu">Z</span>
+        </div>
+      </div>
+      <div class="oooi-row">
+        <div class="oooi-dot off">OFF</div>
+        <div class="oooi-name">Off</div>
+        <div class="oooi-fields">
+          <input data-oooi="off-hh" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="sep">:</span>
+          <input data-oooi="off-mm" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="zulu">Z</span>
+        </div>
+      </div>
+      <div class="oooi-row">
+        <div class="oooi-dot on">ON</div>
+        <div class="oooi-name">On</div>
+        <div class="oooi-fields">
+          <input data-oooi="on-hh" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="sep">:</span>
+          <input data-oooi="on-mm" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="zulu">Z</span>
+        </div>
+      </div>
+      <div class="oooi-row">
+        <div class="oooi-dot in">IN</div>
+        <div class="oooi-name">In</div>
+        <div class="oooi-fields">
+          <input data-oooi="in-hh" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="sep">:</span>
+          <input data-oooi="in-mm" maxlength="2" inputmode="numeric" placeholder="00" autocomplete="off">
+          <span class="zulu">Z</span>
+        </div>
+      </div>
+    </div>
+    <p class="hobbs-hint">Enter any one time → the rest fill using Flight + equal taxi split.</p>
+  </div>
+
+  <div class="panel">
+    <h2 style="margin:0 0 10px 0;">OOOI Double-Check</h2>
+    <div class="check-grid">
+      <div class="check-item" id="oooiFlightItem">
+        <div class="cval" id="oooiFlight">—</div>
+        <div class="clbl">Flight (Off→On)</div>
+      </div>
+      <div class="check-item" id="oooiBlockItem">
+        <div class="cval" id="oooiBlock">—</div>
+        <div class="clbl">Block (Out→In)</div>
+      </div>
+      <div class="check-item">
+        <div class="cval" id="taxiOut">—</div>
+        <div class="clbl">Taxi Out</div>
+      </div>
+      <div class="check-item">
+        <div class="cval" id="taxiIn">—</div>
+        <div class="clbl">Taxi In</div>
+      </div>
+    </div>
+    <div class="check-status idle" id="checkStatus">Enter OOOI times to verify against Hobbs.</div>
+  </div>
+</div><!-- /viewHobbs -->
+
+  <footer>
+    Fuel weight = gallons &times; 6.7 lbs/gal.<br>
+    Available payload = Limit − (BOW + Pax×200 + Bags + Fuel weight).<br>
+    Green = within limit (≥ 0 remaining). Red = over limit (&lt; 0).<br>
+    Clear resets route, fuel, and payload entries — aircraft limits are left as set.
+  </footer>
+</div>
+
+<script>
+const TAILS = ['N604GW','N500M','N109GX','N999ZG'];
+const DEFAULT_LIMITS = {
+  N604GW:{bow:27332, mtow:48200, mlw:38000},
+  N500M: {bow:27593, mtow:48200, mlw:38000},
+  N109GX:{bow:14605, mtow:24650, mlw:20700},
+  N999ZG:{bow:10417, mtow:15000, mlw:15000},
+};
+
+const DEFAULT_LEGS = [
+  {from:'BMG', to:'', gal:0, burn:0, takeoff:0, pax:0, bags:0},
+  {from:'', to:'', gal:0, burn:0, takeoff:null, pax:0, bags:0},
+  {from:'', to:'', gal:0, burn:0, takeoff:null, pax:0, bags:0},
+  {from:'', to:'', gal:0, burn:0, takeoff:null, pax:0, bags:0},
+  {from:'', to:'', gal:0, burn:0, takeoff:null, pax:0, bags:0},
+  {from:'', to:'', gal:0, burn:0, takeoff:null, pax:0, bags:0},
+];
+
+let legs, limits, visibleTails;
+let suppressRecalc = false; // prevents feedback loops when editing landing ↔ burn
+let limitsLocked = true;
+let showExtraLegs = false;
+
+const STORAGE_KEY = 'fuelBurnCalculator_v1';
+
+function loadDefaults(){
+  legs = DEFAULT_LEGS.map(l => ({...l, lbs: l.gal * 6.7}));
+  limits = JSON.parse(JSON.stringify(DEFAULT_LIMITS));
+  visibleTails = new Set(TAILS);
+}
+
+function saveState(){
+  try {
+    const hobbs = {
+      start: document.getElementById('hobbsStart')?.value || '',
+      stop: document.getElementById('hobbsStop')?.value || '',
+      taxi: document.getElementById('taxiAllow')?.value || '0.2',
+      outHH: document.querySelector('[data-oooi="out-hh"]')?.value || '',
+      outMM: document.querySelector('[data-oooi="out-mm"]')?.value || '',
+      offHH: document.querySelector('[data-oooi="off-hh"]')?.value || '',
+      offMM: document.querySelector('[data-oooi="off-mm"]')?.value || '',
+      onHH: document.querySelector('[data-oooi="on-hh"]')?.value || '',
+      onMM: document.querySelector('[data-oooi="on-mm"]')?.value || '',
+      inHH: document.querySelector('[data-oooi="in-hh"]')?.value || '',
+      inMM: document.querySelector('[data-oooi="in-mm"]')?.value || '',
+    };
+    const state = {
+      legs,
+      limits,
+      visibleTails: [...visibleTails],
+      limitsLocked,
+      hobbs,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) { /* private mode / quota — ignore */ }
+}
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const state = JSON.parse(raw);
+    if(!state || !state.legs) return false;
+
+    legs = state.legs;
+    // Ensure lbs is consistent
+    legs.forEach(l => { l.lbs = (l.gal || 0) * 6.7; });
+
+    if(state.limits){
+      limits = state.limits;
+      // Ensure every aircraft still has limits (in case of older saves)
+      TAILS.forEach(t=>{
+        if(!limits[t]) limits[t] = JSON.parse(JSON.stringify(DEFAULT_LIMITS[t]));
+      });
+    }
+    if(state.visibleTails && state.visibleTails.length){
+      visibleTails = new Set(state.visibleTails.filter(t => TAILS.includes(t)));
+      if(visibleTails.size === 0) visibleTails = new Set(TAILS);
+    }
+    if(typeof state.limitsLocked === 'boolean') limitsLocked = state.limitsLocked;
+
+    // Hobbs restored after DOM is ready (called from init)
+    loadState._hobbs = state.hobbs || null;
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+function restoreHobbs(){
+  const h = loadState._hobbs;
+  if(!h) return;
+  const set = (id, v) => { const el = document.getElementById(id); if(el && v !== undefined && v !== null) el.value = v; };
+  set('hobbsStart', h.start);
+  set('hobbsStop', h.stop);
+  set('taxiAllow', h.taxi || '0.2');
+  const setOO = (key, v) => { const el = document.querySelector(`[data-oooi="${key}"]`); if(el && v) el.value = v; };
+  setOO('out-hh', h.outHH); setOO('out-mm', h.outMM);
+  setOO('off-hh', h.offHH); setOO('off-mm', h.offMM);
+  setOO('on-hh', h.onHH);  setOO('on-mm', h.onMM);
+  setOO('in-hh', h.inHH);  setOO('in-mm', h.inMM);
+  updateHobbsDerived();
+}
+
+function clearSavedTrip(){
+  // Keep limits in storage; wipe trip-related data by saving a blank trip state
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    let state = raw ? JSON.parse(raw) : {};
+    state.legs = DEFAULT_LEGS.map(l => ({...l, lbs: 0}));
+    state.hobbs = {
+      start:'', stop:'', taxi:'0.2',
+      outHH:'', outMM:'', offHH:'', offMM:'',
+      onHH:'', onMM:'', inHH:'', inMM:''
+    };
+    // preserve limits / visibleTails / limitsLocked
+    if(limits) state.limits = limits;
+    if(visibleTails) state.visibleTails = [...visibleTails];
+    state.limitsLocked = limitsLocked;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) {}
+}
+
+function buildTailToggles(){
+  const wrap = document.getElementById('tailToggles');
+  wrap.innerHTML = TAILS.map(t => `
+    <label class="tail-chip ${visibleTails.has(t) ? 'on':''}" data-chip="${t}">
+      <input type="checkbox" data-tail-toggle="${t}" ${visibleTails.has(t) ? 'checked':''}>
+      ${t}
+    </label>
+  `).join('');
+  wrap.addEventListener('change', e=>{
+    const t = e.target.dataset.tailToggle;
+    if(!t) return;
+    if(e.target.checked) visibleTails.add(t); else visibleTails.delete(t);
+    e.target.closest('.tail-chip').classList.toggle('on', e.target.checked);
+    // Rebuild tables so all visible aircraft get weight/payload cells
+    buildTotalsHead();
+    buildTotalsTable();
+    buildPayloadHead();
+    buildPayloadTable();
+    buildLimitsGrid();
+    applyTailVisibility();
+    updateTopoffButtons();
+    recalc();
+    saveState();
+  });
+}
+
+function applyTailVisibility(){
+  const single = visibleTails.size === 1;
+  document.getElementById('payloadPanel').classList.toggle('single-tail', single);
+  document.getElementById('totalsPanel').classList.toggle('single-tail', single);
+
+  document.querySelectorAll('[data-tail]').forEach(el=>{
+    const show = visibleTails.has(el.dataset.tail);
+    el.style.display = show ? '' : 'none';
+  });
+}
+
+function buildRouteTable(){
+  const body = document.getElementById('routeBody');
+  body.innerHTML = '';
+  const blank0 = v => (v === 0 || v === '0' || v === null || v === undefined) ? '' : v;
+  legs.forEach((leg,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i===0
+          ? `<input class="txt" data-role="from" data-i="${i}" value="${leg.from}">`
+          : `<span class="computed" id="from-${i}"></span>`}</td>
+      <td><input class="txt" data-role="to" data-i="${i}" value="${leg.to}"></td>
+      <td><input data-role="gal" data-i="${i}" value="${leg.gal ? (Math.round(leg.gal * 10) / 10) : ''}" inputmode="decimal"></td>
+      <td><input data-role="lbs" data-i="${i}" value="${blank0(leg.lbs)}" inputmode="decimal"></td>
+      <td><input class="wide" data-role="takeoff" data-i="${i}" value="" inputmode="decimal" id="tko-input-${i}"></td>
+      <td><input data-role="burn" data-i="${i}" value="${blank0(leg.burn)}" inputmode="decimal"></td>
+      <td><input class="wide" data-role="landing" data-i="${i}" value="" inputmode="decimal"></td>
+    `;
+    tr.dataset.legRow = String(i);
+    if(i >= 2) tr.classList.add('leg-extra');
+    body.appendChild(tr);
+  });
+  if(!body.dataset.wired){
+    body.addEventListener('input', onRouteInput);
+    body.dataset.wired = '1';
+  }
+  updateCollapsedLegs();
+}
+
+function onRouteInput(e){
+  const role = e.target.dataset.role;
+  const i = parseInt(e.target.dataset.i, 10);
+  if(isNaN(i)) return;
+
+  // Auto-capitalize text fields
+  if(role==='from' || role==='to'){
+    const start = e.target.selectionStart;
+    const end = e.target.selectionEnd;
+    e.target.value = e.target.value.toUpperCase();
+    e.target.setSelectionRange(start, end);
+    if(role==='from') legs[i].from = e.target.value;
+    if(role==='to') legs[i].to = e.target.value;
+  }
+
+  if(role==='gal'){
+    const prevLbs = legs[i].lbs || 0;
+    legs[i].gal = Math.round(((parseFloat(e.target.value) || 0) * 10)) / 10;
+    legs[i].lbs = Math.round(legs[i].gal * 6.7);
+    const lbsInput = document.querySelector(`[data-role="lbs"][data-i="${i}"]`);
+    if(lbsInput) lbsInput.value = legs[i].lbs ? legs[i].lbs.toFixed(0) : '';
+    // Leg 1: uplift adjusts takeoff (same idea as other legs)
+    if(i===0){
+      const delta = (legs[i].lbs || 0) - prevLbs;
+      legs[0].takeoff = (legs[0].takeoff || 0) + delta;
+    } else {
+      // uplift changed → drop manual override so chain recalculates
+      legs[i].tkoOverride = null;
+    }
+    clearDownstreamOverrides(i);
+  }
+  if(role==='lbs'){
+    const prevLbs = legs[i].lbs || 0;
+    legs[i].lbs = Math.round(parseFloat(e.target.value) || 0);
+    legs[i].gal = Math.round((legs[i].lbs / 6.7) * 10) / 10;
+    const galInput = document.querySelector(`[data-role="gal"][data-i="${i}"]`);
+    if(galInput) galInput.value = legs[i].gal ? (Math.round(legs[i].gal * 10) / 10).toFixed(1).replace(/\.0$/,'') : '';
+    if(i===0){
+      const delta = (legs[i].lbs || 0) - prevLbs;
+      legs[0].takeoff = (legs[0].takeoff || 0) + delta;
+    } else {
+      legs[i].tkoOverride = null;
+    }
+    clearDownstreamOverrides(i);
+  }
+  if(role==='burn'){
+    legs[i].burn = parseFloat(e.target.value) || 0;
+    clearDownstreamOverrides(i);
+  }
+  if(role==='takeoff'){
+    const raw = e.target.value.trim();
+    if(raw === ''){
+      // blank → clear override (legs 2–6 snap back to calculated)
+      if(i===0) legs[0].takeoff = 0;
+      else legs[i].tkoOverride = null;
+      e.target.classList.remove('tko-manual');
+      e.target.title = '';
+    } else {
+      const val = parseFloat(raw);
+      if(!isNaN(val)){
+        if(i===0){
+          legs[0].takeoff = val;
+          e.target.classList.remove('tko-manual');
+        } else {
+          legs[i].tkoOverride = val; // manual override
+          e.target.classList.add('tko-manual');
+          e.target.title = 'Manual override — clear cell to use calculated takeoff';
+        }
+      }
+    }
+    clearDownstreamOverrides(i);
+  }
+  if(role==='landing'){
+    // User editing landing → back-calculate burn: Burn = Takeoff - Landing
+    const newLanding = parseFloat(e.target.value);
+    if(!isNaN(newLanding)){
+      suppressRecalc = true;
+      const takeoff = getTakeoffForLeg(i);
+      legs[i].burn = takeoff - newLanding;
+      const burnInput = document.querySelector(`[data-role="burn"][data-i="${i}"]`);
+      if(burnInput) burnInput.value = legs[i].burn ? legs[i].burn.toFixed(0) : '';
+      suppressRecalc = false;
+      clearDownstreamOverrides(i);
+    }
+  }
+
+  if(!suppressRecalc) recalc();
+}
+
+// Helper to get computed takeoff for a leg without full recalc side-effects
+function getTakeoffForLeg(i){
+  // Returns effective takeoff for leg i (respects manual overrides)
+  let tko = legs[0].takeoff || 0;
+  let ldg = tko - (legs[0].burn || 0);
+  if(i===0) return tko;
+  for(let j=1; j<=i; j++){
+    const calc = ldg + (legs[j].lbs || 0);
+    tko = (legs[j].tkoOverride != null && legs[j].tkoOverride !== '') ? Number(legs[j].tkoOverride) : calc;
+    ldg = tko - (legs[j].burn || 0);
+  }
+  return tko;
+}
+
+function buildTotalsHead(){
+  const row = document.getElementById('totalsHeadRow');
+  // Group by aircraft: T/O then Ldg for each visible tail
+  const ordered = TAILS.filter(t => visibleTails.has(t));
+  row.innerHTML = `
+    <th></th>
+    ${ordered.map(t => `
+      <th data-tail="${t}">${t}<br>T/O</th>
+      <th data-tail="${t}">${t}<br>Ldg</th>
+    `).join('')}
+  `;
+}
+
+function buildTotalsTable(){
+  const body = document.getElementById('totalsBody');
+  body.innerHTML = '';
+  const ordered = TAILS.filter(t => visibleTails.has(t));
+  legs.forEach((leg,i) => {
+    const tr = document.createElement('tr');
+    tr.dataset.legRow = String(i);
+    tr.innerHTML = `
+      <td class="label">Leg ${i+1}</td>
+      ${ordered.map(t => `
+        <td data-tail="${t}"><span class="computed" id="tot-to-${t}-${i}"></span></td>
+        <td data-tail="${t}"><span class="computed" id="tot-ldg-${t}-${i}"></span></td>
+      `).join('')}
+    `;
+    body.appendChild(tr);
+  });
+  applyTailVisibility();
+}
+
+function buildPayloadHead(){
+  const row = document.getElementById('payloadHeadRow');
+  const ordered = TAILS.filter(t => visibleTails.has(t));
+  row.innerHTML = `
+    <th></th><th>Pax</th><th>Bags</th>
+    ${ordered.map(t => `
+      <th data-tail="${t}">${t}<br>T/O</th>
+      <th data-tail="${t}">${t}<br>Ldg</th>
+    `).join('')}
+  `;
+}
+
+function buildPayloadTable(){
+  const body = document.getElementById('payloadBody');
+  body.innerHTML = '';
+  const ordered = TAILS.filter(t => visibleTails.has(t));
+  legs.forEach((leg,i) => {
+    const tr = document.createElement('tr');
+    tr.dataset.legRow = String(i);
+    tr.innerHTML = `
+      <td class="label">Leg ${i+1}</td>
+      <td><input data-role="pax" data-i="${i}" value="${leg.pax || ''}" inputmode="numeric"></td>
+      <td><input data-role="bags" data-i="${i}" value="${leg.bags || ''}" inputmode="numeric"></td>
+      ${ordered.map(t => `
+        <td data-tail="${t}"><span class="computed" id="pay-to-${t}-${i}"></span></td>
+        <td data-tail="${t}"><span class="computed" id="pay-ldg-${t}-${i}"></span></td>
+      `).join('')}
+    `;
+    body.appendChild(tr);
+  });
+  if(!body.dataset.wired){
+    body.addEventListener('input', onPayloadInput);
+    body.dataset.wired = '1';
+  }
+  applyTailVisibility();
+}
+
+function onPayloadInput(e){
+  const role = e.target.dataset.role;
+  const i = parseInt(e.target.dataset.i, 10);
+  if(role==='pax') legs[i].pax = parseFloat(e.target.value) || 0;
+  if(role==='bags') legs[i].bags = parseFloat(e.target.value) || 0;
+  recalc();
+}
+
+function buildLimitsGrid(){
+  const headRow = document.getElementById('limitsHeadRow');
+  const ordered = TAILS.filter(t => visibleTails.has(t));
+  headRow.innerHTML = `<th></th>${ordered.map(t=>`<th data-tail="${t}">${t}</th>`).join('')}`;
+
+  const body = document.getElementById('limitsBody');
+  const ro = limitsLocked ? 'readonly' : '';
+  const fieldRow = (label, field) => `
+    <tr>
+      <td class="label">${label}</td>
+      ${ordered.map(t=>`<td data-tail="${t}"><input data-tail="${t}" data-field="${field}" value="${limits[t][field]}" ${ro} inputmode="decimal"></td>`).join('')}
+    </tr>`;
+  body.innerHTML = fieldRow('BOW','bow') + fieldRow('MTOW','mtow') + fieldRow('MLW','mlw');
+
+  // Style readonly inputs
+  body.querySelectorAll('input').forEach(inp=>{
+    if(limitsLocked){
+      inp.style.opacity = '0.7';
+      inp.style.cursor = 'default';
+    } else {
+      inp.style.opacity = '1';
+      inp.style.cursor = 'text';
+    }
+  });
+
+  // Re-bind listener (safe because we rebuild)
+  body.oninput = e=>{
+    if(limitsLocked) return;
+    const tail = e.target.dataset.tail, field = e.target.dataset.field;
+    if(!tail || !field) return;
+    limits[tail][field] = parseFloat(e.target.value) || 0;
+    recalc();
+  };
+  applyTailVisibility();
+}
+
+function wireUnlockLimits(){
+  const btn = document.getElementById('unlockLimitsBtn');
+  // Reflect current lock state on the button
+  if(limitsLocked){
+    btn.textContent = 'Unlock to Edit';
+    btn.style.borderColor = 'var(--amber-dim)';
+    btn.style.color = 'var(--amber)';
+    btn.style.background = 'transparent';
+  } else {
+    btn.textContent = 'Lock Limits';
+    btn.style.borderColor = 'var(--green)';
+    btn.style.color = '#0d1117';
+    btn.style.background = 'var(--green)';
+  }
+  btn.addEventListener('click', ()=>{
+    limitsLocked = !limitsLocked;
+    if(limitsLocked){
+      btn.textContent = 'Unlock to Edit';
+      btn.style.borderColor = 'var(--amber-dim)';
+      btn.style.color = 'var(--amber)';
+      btn.style.background = 'transparent';
+    } else {
+      btn.textContent = 'Lock Limits';
+      btn.style.borderColor = 'var(--green)';
+      btn.style.color = '#0d1117';
+      btn.style.background = 'var(--green)';
+    }
+    buildLimitsGrid();
+    saveState();
+  });
+}
+
+function setCell(id, value, opts = {}){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove('ok','neg','over');
+  if(value === null || value === undefined || value === ''){
+    el.textContent = '';
+    return;
+  }
+  el.textContent = (typeof value === 'number') ? value.toFixed(0) : value;
+  if(opts.ok !== undefined){
+    el.classList.toggle('ok', opts.ok);
+    el.classList.toggle('neg', !opts.ok);
+  }
+  if(opts.over) el.classList.add('over');
+}
+
+
+function clearDownstreamOverrides(fromIndex){
+  // Previous leg changed → drop manual takeoffs on all later legs
+  for(let j = fromIndex + 1; j < 6; j++){
+    legs[j].tkoOverride = null;
+  }
+}
+
+function hasLegData(i){
+  if(i === 0) return (legs[0].takeoff || 0) !== 0 || (legs[0].to && legs[0].to.trim()) || legs[0].burn || legs[0].gal;
+  return (legs[i].to && legs[i].to.trim()) || legs[i].burn || legs[i].gal || (legs[i].tkoOverride != null && legs[i].tkoOverride !== '');
+}
+
+function recalc(){
+  if(suppressRecalc) return;
+
+  const lbs = [], takeoff = [], landing = [];
+
+  for(let i=0;i<6;i++){
+    lbs[i] = legs[i].lbs || 0;
+    if(i===0){
+      takeoff[i] = legs[0].takeoff || 0;
+      landing[i] = takeoff[i] - (legs[i].burn || 0);
+    } else {
+      const calc = landing[i-1] + lbs[i];
+      if(legs[i].tkoOverride != null && legs[i].tkoOverride !== ''){
+        takeoff[i] = Number(legs[i].tkoOverride);
+      } else if(!hasLegData(i)){
+        takeoff[i] = 0;
+      } else {
+        takeoff[i] = calc;
+      }
+      landing[i] = takeoff[i] - (legs[i].burn || 0);
+    }
+
+    // auto FROM = previous leg's TO
+    if(i>0){
+      legs[i].from = legs[i-1].to;
+      const el = document.getElementById(`from-${i}`);
+      if(el) el.textContent = legs[i].from || '—';
+    }
+
+    // Update takeoff input — always refresh manual highlight; skip value while typing
+    const tkoInput = document.querySelector(`[data-role="takeoff"][data-i="${i}"]`);
+    if(tkoInput){
+      const isManual = i>0 && legs[i].tkoOverride != null && legs[i].tkoOverride !== '';
+      tkoInput.classList.toggle('tko-manual', isManual);
+      tkoInput.title = isManual ? 'Manual override — clear cell to use calculated takeoff' : '';
+      if(document.activeElement !== tkoInput){
+        if(hasLegData(i) || (i===0 && takeoff[i])){
+          tkoInput.value = takeoff[i] ? takeoff[i].toFixed(0) : '';
+        } else {
+          tkoInput.value = '';
+        }
+      }
+    }
+
+    // Update landing input (only if user is not currently editing it)
+    const ldgInput = document.querySelector(`[data-role="landing"][data-i="${i}"]`);
+    if(ldgInput && document.activeElement !== ldgInput){
+      ldgInput.value = hasLegData(i) ? landing[i].toFixed(0) : '';
+    }
+  }
+
+  // Total weights and available payloads
+  const ordered = TAILS.filter(t => visibleTails.has(t));
+
+  for(let i=0;i<6;i++){
+    const paxW = (legs[i].pax || 0) * 200;
+    const bagsW = legs[i].bags || 0;
+    const active = hasLegData(i);
+
+    ordered.forEach(t=>{
+      if(!limits[t]) return;
+      const bow = limits[t].bow;
+      const mtow = limits[t].mtow;
+      const mlw = limits[t].mlw;
+
+      if(!active){
+        setCell(`tot-to-${t}-${i}`, '');
+        setCell(`tot-ldg-${t}-${i}`, '');
+        setCell(`pay-to-${t}-${i}`,  '');
+        setCell(`pay-ldg-${t}-${i}`, '');
+        return;
+      }
+
+      const totTo  = bow + paxW + bagsW + takeoff[i];
+      const totLdg = bow + paxW + bagsW + landing[i];
+
+      setCell(`tot-to-${t}-${i}`, totTo,  { over: totTo  > mtow });
+      setCell(`tot-ldg-${t}-${i}`, totLdg, { over: totLdg > mlw });
+
+      const availTo  = mtow - (bow + paxW + bagsW + takeoff[i]);
+      const availLdg = mlw  - (bow + paxW + bagsW + landing[i]);
+
+      setCell(`pay-to-${t}-${i}`,  availTo,  { ok: availTo  >= 0 });
+      setCell(`pay-ldg-${t}-${i}`, availLdg, { ok: availLdg >= 0 });
+    });
+  }
+  updateCollapsedLegs();
+  saveState();
+}
+
+function clearFlightData(){
+  legs.forEach((leg,i)=>{
+    leg.from = (i===0) ? 'BMG' : '';
+    leg.to = '';
+    leg.gal = 0;
+    leg.lbs = 0;
+    leg.burn = 0;
+    leg.pax = 0;
+    leg.bags = 0;
+    leg.tkoOverride = null;
+    if(i===0) leg.takeoff = 0;
+  });
+  buildRouteTable();
+  buildPayloadTable();
+  histPast = [];
+  histFuture = [];
+  histLast = null;
+  updateHistButtons();
+  histSuspended = true;
+  recalc();
+  histSuspended = false;
+  histLast = snapshotFuel();
+  clearSavedTrip();
+  saveState();
+}
+
+const clearBtn = document.getElementById('clearBtn');
+let armed = false;
+let armTimer = null;
+
+clearBtn.addEventListener('click', ()=>{
+  if(!armed){
+    armed = true;
+    clearBtn.textContent = 'Tap again to clear';
+    clearBtn.classList.add('confirming');
+    clearTimeout(armTimer);
+    armTimer = setTimeout(()=>{
+      armed = false;
+      clearBtn.textContent = 'Clear';
+      clearBtn.classList.remove('confirming');
+    }, 3000);
+  } else {
+    clearTimeout(armTimer);
+    armed = false;
+    clearBtn.textContent = 'Clear';
+    clearBtn.classList.remove('confirming');
+    clearFlightData();
+  }
+});
+
+// ---------- Hobbs & OOOI ----------
+function parseTimeToMinutes(hh, mm){
+  const h = parseInt(hh, 10);
+  const m = parseInt(mm, 10);
+  if(isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+}
+
+function minutesToHHMM(totalMin){
+  // Normalize to 0–1439 (24h wrap)
+  totalMin = ((totalMin % 1440) + 1440) % 1440;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return { hh: String(h).padStart(2,'0'), mm: String(m).padStart(2,'0') };
+}
+
+function setOOOI(prefix, hh, mm){
+  const hhEl = document.querySelector(`[data-oooi="${prefix}-hh"]`);
+  const mmEl = document.querySelector(`[data-oooi="${prefix}-mm"]`);
+  if(hhEl && document.activeElement !== hhEl) hhEl.value = hh;
+  if(mmEl && document.activeElement !== mmEl) mmEl.value = mm;
+}
+
+function getOOOI(prefix){
+  const hh = document.querySelector(`[data-oooi="${prefix}-hh"]`)?.value;
+  const mm = document.querySelector(`[data-oooi="${prefix}-mm"]`)?.value;
+  return parseTimeToMinutes(hh, mm);
+}
+
+function updateHobbsDerived(){
+  const start = parseFloat(document.getElementById('hobbsStart').value);
+  const stop  = parseFloat(document.getElementById('hobbsStop').value);
+  const taxi  = parseFloat(document.getElementById('taxiAllow').value);
+  const flightEl = document.getElementById('flightTime');
+  const blockEl  = document.getElementById('blockTime');
+
+  let flight = null;
+  if(!isNaN(start) && !isNaN(stop)){
+    flight = Math.round((stop - start) * 1000) / 1000; // keep precision
+    if(flight < 0) flight = null;
+  }
+  flightEl.textContent = (flight !== null) ? flight.toFixed(1).replace(/\.0$/,'') : '—';
+
+  let block = null;
+  if(flight !== null && !isNaN(taxi)){
+    block = Math.round((flight + taxi) * 1000) / 1000;
+  }
+  blockEl.textContent = (block !== null) ? block.toFixed(1).replace(/\.0$/,'') : '—';
+
+  return { flight, block, taxi: isNaN(taxi) ? 0.2 : taxi };
+}
+
+
+function hoursBetween(a, b){
+  if(a == null || b == null) return null;
+  let d = b - a; if(d < 0) d += 1440;
+  return Math.round((d / 60) * 1000) / 1000;
+}
+function fmtHours(h){
+  if(h == null || isNaN(h)) return '—';
+  return (Math.round(h * 100) / 100).toFixed(2).replace(/\.?0+$/, '') || '0';
+}
+function updateDoubleCheck(){
+  const out = getOOOI('out'), off = getOOOI('off'), on = getOOOI('on'), inn = getOOOI('in');
+  const oFlight = hoursBetween(off, on);
+  const oBlock = hoursBetween(out, inn);
+  const elF = document.getElementById('oooiFlight');
+  const elB = document.getElementById('oooiBlock');
+  const elO = document.getElementById('taxiOut');
+  const elI = document.getElementById('taxiIn');
+  if(elF) elF.textContent = fmtHours(oFlight);
+  if(elB) elB.textContent = fmtHours(oBlock);
+  if(elO) elO.textContent = fmtHours(hoursBetween(out, off));
+  if(elI) elI.textContent = fmtHours(hoursBetween(on, inn));
+  const { flight, block } = updateHobbsDerived();
+  const status = document.getElementById('checkStatus');
+  const fItem = document.getElementById('oooiFlightItem');
+  const bItem = document.getElementById('oooiBlockItem');
+  if(!status) return;
+  if(fItem) fItem.classList.remove('match','mismatch');
+  if(bItem) bItem.classList.remove('match','mismatch');
+  const near = (a,b) => a != null && b != null && Math.abs(a-b) < 0.02;
+  if(oFlight == null && oBlock == null){
+    status.className = 'check-status idle';
+    status.textContent = 'Enter OOOI times to verify against Hobbs.';
+    return;
+  }
+  let flightOk = null, blockOk = null;
+  if(oFlight != null && flight != null){
+    flightOk = near(oFlight, flight);
+    if(fItem) fItem.classList.add(flightOk ? 'match' : 'mismatch');
+  }
+  if(oBlock != null && block != null){
+    blockOk = near(oBlock, block);
+    if(bItem) bItem.classList.add(blockOk ? 'match' : 'mismatch');
+  }
+  if(flightOk === true && blockOk === true){
+    status.className = 'check-status ok';
+    status.textContent = '✓ OOOI matches Hobbs flight & block';
+  } else if(flightOk === false || blockOk === false){
+    status.className = 'check-status bad';
+    const parts = [];
+    if(flightOk === false) parts.push('Flight off by '+fmtHours(Math.abs(oFlight-flight))+' hr');
+    if(blockOk === false) parts.push('Block off by '+fmtHours(Math.abs(oBlock-block))+' hr');
+    status.textContent = parts.join(' · ');
+  } else {
+    status.className = 'check-status warn';
+    status.textContent = 'OOOI set — enter Hobbs to compare';
+  }
+}
+
+function fillOOOIFrom(source){
+  // source = 'out' | 'off' | 'on' | 'in'
+  const { flight, block, taxi } = updateHobbsDerived();
+  if(flight === null || block === null) return;
+
+  const flightMin = Math.round(flight * 60);
+  const taxiMin   = Math.round(taxi * 60);
+  const taxiOut   = Math.floor(taxiMin / 2);
+  const taxiIn    = taxiMin - taxiOut;
+
+  const srcMin = getOOOI(source);
+  if(srcMin === null) return;
+
+  let out, off, on, inn;
+  if(source === 'out'){
+    out = srcMin;
+    off = out + taxiOut;
+    on  = off + flightMin;
+    inn = on  + taxiIn;
+  } else if(source === 'off'){
+    off = srcMin;
+    out = off - taxiOut;
+    on  = off + flightMin;
+    inn = on  + taxiIn;
+  } else if(source === 'on'){
+    on  = srcMin;
+    off = on - flightMin;
+    out = off - taxiOut;
+    inn = on  + taxiIn;
+  } else { // in
+    inn = srcMin;
+    on  = inn - taxiIn;
+    off = on  - flightMin;
+    out = off - taxiOut;
+  }
+
+  const o = minutesToHHMM(out);
+  const f = minutesToHHMM(off);
+  const n = minutesToHHMM(on);
+  const i = minutesToHHMM(inn);
+
+  if(source !== 'out') setOOOI('out', o.hh, o.mm);
+  if(source !== 'off') setOOOI('off', f.hh, f.mm);
+  if(source !== 'on')  setOOOI('on',  n.hh, n.mm);
+  if(source !== 'in')  setOOOI('in',  i.hh, i.mm);
+  updateDoubleCheck();
+}
+
+function wireHobbsOOOI(){
+  ['hobbsStart','hobbsStop','taxiAllow'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      updateHobbsDerived();
+      // Re-fill from whichever OOOI field currently has focus, or from Out if none
+      const active = document.activeElement?.dataset?.oooi;
+      if(active){
+        const src = active.split('-')[0];
+        fillOOOIFrom(src);
+      } else {
+        // Prefer Out if it has a value
+        if(getOOOI('out') !== null) fillOOOIFrom('out');
+        else if(getOOOI('off') !== null) fillOOOIFrom('off');
+        else if(getOOOI('on') !== null) fillOOOIFrom('on');
+        else if(getOOOI('in') !== null) fillOOOIFrom('in');
+      }
+      saveState();
+    });
+  });
+
+  document.querySelectorAll('[data-oooi]').forEach(el=>{
+    el.addEventListener('input', e=>{
+      // Keep only digits, max 2
+      e.target.value = e.target.value.replace(/\D/g,'').slice(0,2);
+      const src = e.target.dataset.oooi.split('-')[0];
+      // Only auto-fill when we have a complete HH+MM for that row
+      const hh = document.querySelector(`[data-oooi="${src}-hh"]`).value;
+      const mm = document.querySelector(`[data-oooi="${src}-mm"]`).value;
+      if(hh.length === 2 && mm.length === 2){
+        fillOOOIFrom(src);
+      }
+      updateDoubleCheck();
+      saveState();
+    });
+    el.addEventListener('blur', e=>{
+      // Pad single digit on blur
+      if(e.target.value.length === 1) e.target.value = e.target.value.padStart(2,'0');
+      const src = e.target.dataset.oooi.split('-')[0];
+      if(getOOOI(src) !== null) fillOOOIFrom(src);
+      updateDoubleCheck();
+      saveState();
+    });
+  });
+
+  // Separate clear for Hobbs / OOOI only (confirm with second tap)
+  const clearHobbsBtn = document.getElementById('clearHobbsBtn');
+  let hobbsArmed = false;
+  let hobbsArmTimer = null;
+  clearHobbsBtn.addEventListener('click', ()=>{
+    if(!hobbsArmed){
+      hobbsArmed = true;
+      clearHobbsBtn.textContent = 'Tap again to clear';
+      clearHobbsBtn.classList.add('confirming');
+      clearTimeout(hobbsArmTimer);
+      hobbsArmTimer = setTimeout(()=>{
+        hobbsArmed = false;
+        clearHobbsBtn.textContent = 'Clear Hobbs';
+        clearHobbsBtn.classList.remove('confirming');
+      }, 3000);
+    } else {
+      clearTimeout(hobbsArmTimer);
+      hobbsArmed = false;
+      clearHobbsBtn.textContent = 'Clear Hobbs';
+      clearHobbsBtn.classList.remove('confirming');
+      document.getElementById('hobbsStart').value = '';
+      document.getElementById('hobbsStop').value = '';
+      document.getElementById('taxiAllow').value = '0.2';
+      document.getElementById('flightTime').textContent = '—';
+      document.getElementById('blockTime').textContent = '—';
+      document.querySelectorAll('[data-oooi]').forEach(el => el.value = '');
+      updateHobbsDerived();
+      if(typeof updateDoubleCheck==='function') updateDoubleCheck();
+      saveState();
+    }
+  });
+}
+
+
+function updateCollapsedLegs(){
+  // Leg 1–2 always shown. Later legs show if they have data, prior leg has data, or user expanded.
+  function legVisible(i){
+    if(i < 2) return true;
+    if(showExtraLegs) return true;
+    if(hasLegData(i)) return true;
+    if(i > 0 && hasLegData(i - 1)) return true; // next leg after activity
+    return false;
+  }
+  let anyHidden = false;
+  document.querySelectorAll('#routeBody tr').forEach(tr=>{
+    const i = parseInt(tr.dataset.legRow, 10);
+    if(isNaN(i)) return;
+    const vis = legVisible(i);
+    tr.classList.toggle('leg-collapsed', !vis);
+    if(i >= 2 && !vis) anyHidden = true;
+  });
+  document.querySelectorAll('#totalsBody tr, #payloadBody tr').forEach(tr=>{
+    const i = parseInt(tr.dataset.legRow, 10);
+    if(isNaN(i)) return;
+    tr.classList.toggle('leg-collapsed', !legVisible(i));
+  });
+  const btn = document.getElementById('legsToggleBtn');
+  if(btn){
+    // Show button if any of 3–6 can be toggled (not all forced visible by data)
+    let allForced = true;
+    for(let i = 2; i < 6; i++){
+      if(!(hasLegData(i) || hasLegData(i - 1))) allForced = false;
+    }
+    btn.style.display = allForced ? 'none' : '';
+    btn.textContent = showExtraLegs ? 'Hide legs 3–6' : 'Show legs 3–6';
+  }
+}
+
+function wireLegsToggle(){
+  const btn = document.getElementById('legsToggleBtn');
+  if(!btn || btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.addEventListener('click', ()=>{
+    showExtraLegs = !showExtraLegs;
+    updateCollapsedLegs();
+  });
+}
+
+function showToast(msg, isWarn){
+  const el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'toast on' + (isWarn ? ' warn' : '');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>{ el.classList.remove('on'); }, 3200);
+}
+
+function legHasUpstream(i){
+  // Leg 1 always available; later legs need prior leg to have some fuel chain activity
+  if(i === 0) return true;
+  for(let j = 0; j < i; j++){
+    if(hasLegData(j)) return true;
+  }
+  return false;
+}
+
+function suggestTopoffLeg(){
+  // Prefer the next leg after the last one with data (common "top for next departure")
+  let last = -1;
+  for(let i = 0; i < 6; i++){
+    if(hasLegData(i)) last = i;
+  }
+  if(last >= 0 && last < 5 && legHasUpstream(last + 1)) return last + 1;
+  // Else first empty leg that has upstream
+  for(let i = 0; i < 6; i++){
+    if(legHasUpstream(i) && !hasLegData(i)) return i;
+  }
+  // Else last leg with data (re-top same leg)
+  if(last >= 0) return last;
+  return 0;
+}
+
+// ---------- Top-off presets (via uplift gal/lbs, not manual T/O) ----------
+const TOPOFF = {
+  wings: { label: 'Top Wings', targetLbs: 9270, tails: ['N604GW', 'N500M'] },
+  outboards: { label: 'Top Outboards', targetLbs: 2546, tails: ['N999ZG'] },
+};
+let pendingTopoff = null; // { targetLbs, label }
+
+function updateTopoffButtons(){
+  const row = document.getElementById('topoffRow');
+  if(!row) return;
+  const parts = [];
+  if(TOPOFF.wings.tails.some(t => visibleTails.has(t))){
+    parts.push('<button type="button" class="topoff-btn" data-topoff="wings">Top Wings · 9270</button>');
+  }
+  if(TOPOFF.outboards.tails.some(t => visibleTails.has(t))){
+    parts.push('<button type="button" class="topoff-btn" data-topoff="outboards">Top Outboards · 2546</button>');
+  }
+  parts.push('<button type="button" class="topoff-btn" data-topoff="uplift-calc">Uplift calc</button>');
+  row.innerHTML = parts.join('');
+  // hide picker when buttons change
+  const picker = document.getElementById('topoffPicker');
+  if(picker) picker.classList.remove('on');
+  pendingTopoff = null;
+  const uc = document.getElementById('upliftCalc');
+  if(uc) uc.classList.remove('on');
+}
+
+function openTopoffPicker(kind){
+  const cfg = TOPOFF[kind];
+  if(!cfg) return;
+  pendingTopoff = { targetLbs: cfg.targetLbs, label: cfg.label };
+  const picker = document.getElementById('topoffPicker');
+  const label = document.getElementById('topoffPickerLabel');
+  const btns = document.getElementById('topoffLegBtns');
+  label.textContent = cfg.label + ' (' + cfg.targetLbs + ' lbs) — which leg?';
+  btns.innerHTML = [0,1,2,3,4,5].map(i => {
+    // White text if leg is in play (has upstream / can use); grey if not yet available
+    const up = legHasUpstream(i);
+    const cls = up ? 'leg-pick' : 'leg-pick muted';
+    return '<button type="button" class="'+cls+'" data-leg="'+i+'">Leg '+(i+1)+'</button>';
+  }).join('') + '<button type="button" class="leg-pick muted" data-leg="cancel">Cancel</button>';
+  picker.classList.add('on');
+}
+
+function prevLandingForTopoff(legIndex){
+  // Walk chain to get landing of previous leg (legIndex-1), ignoring overrides downstream of target
+  if(legIndex <= 0) return 0;
+  let tko = legs[0].takeoff || 0;
+  let ldg = tko - (legs[0].burn || 0);
+  for(let j = 1; j < legIndex; j++){
+    const calc = ldg + (legs[j].lbs || 0);
+    tko = (legs[j].tkoOverride != null && legs[j].tkoOverride !== '') ? Number(legs[j].tkoOverride) : calc;
+    ldg = tko - (legs[j].burn || 0);
+  }
+  return ldg;
+}
+
+function applyTopoffToLeg(legIndex){
+  if(!pendingTopoff) return;
+  const before = snapshotFuel();
+  const target = pendingTopoff.targetLbs;
+  const label = pendingTopoff.label || 'Top off';
+  const i = legIndex;
+  let needLbs = 0;
+  let alreadyOver = false;
+
+  if(i === 0){
+    const prevLbs = legs[0].lbs || 0;
+    const preUplift = (legs[0].takeoff || 0) - prevLbs;
+    if(preUplift >= target){
+      alreadyOver = true;
+      needLbs = 0;
+      legs[0].lbs = 0;
+      legs[0].gal = 0;
+      legs[0].takeoff = target;
+    } else {
+      needLbs = target - preUplift;
+      legs[0].lbs = needLbs;
+      legs[0].gal = Math.round((needLbs / 6.7) * 10) / 10;
+      legs[0].takeoff = target;
+    }
+  } else {
+    const prevLdg = prevLandingForTopoff(i);
+    if(prevLdg >= target){
+      alreadyOver = true;
+      needLbs = 0;
+      legs[i].lbs = 0;
+      legs[i].gal = 0;
+      legs[i].tkoOverride = target; // explicit set to target when already over
+      clearDownstreamOverrides(i);
+    } else {
+      needLbs = target - prevLdg;
+      legs[i].lbs = needLbs;
+      legs[i].gal = Math.round((needLbs / 6.7) * 10) / 10;
+      legs[i].tkoOverride = null;
+      clearDownstreamOverrides(i);
+    }
+  }
+
+  document.getElementById('topoffPicker').classList.remove('on');
+  pendingTopoff = null;
+  histPast.push(before);
+  if(histPast.length > HIST_MAX) histPast.shift();
+  histFuture = [];
+  buildRouteTable();
+  updateCollapsedLegs();
+  histSuspended = true;
+  recalc();
+  histSuspended = false;
+  histLast = snapshotFuel();
+  updateHistButtons();
+  saveState();
+
+  const galStr = (Math.round((needLbs / 6.7) * 10) / 10).toFixed(1).replace(/\.0$/, '');
+  if(alreadyOver){
+    showToast('Leg '+(i+1)+' · already ≥ '+target+' lbs — set T/O to '+target, true);
+  } else {
+    showToast('Leg '+(i+1)+' · +'+galStr+' gal → T/O '+target);
+  }
+}
+
+function refreshUpliftCalc(){
+  const cur = parseFloat(document.getElementById('ucCurrent')?.value) || 0;
+  const req = parseFloat(document.getElementById('ucRequired')?.value) || 0;
+  const needLbs = req - cur;
+  const galEl = document.getElementById('ucGalOut');
+  const subEl = document.getElementById('ucLbsOut');
+  if(needLbs <= 0){
+    if(galEl) galEl.textContent = '0';
+    if(subEl) subEl.textContent = needLbs < 0
+      ? ('Already '+Math.round(-needLbs)+' lbs over required')
+      : 'No uplift needed';
+    return { gal: 0, lbs: 0, needLbs };
+  }
+  // Round gallons to nearest 5 for practical uplift
+  const galExact = needLbs / 6.7;
+  const gal = Math.round(galExact / 5) * 5;
+  const lbs = Math.round(gal * 6.7);
+  if(galEl) galEl.textContent = String(gal);
+  if(subEl) subEl.textContent = lbs+' lbs to add (nearest 5 gal)';
+  return { gal, lbs, needLbs };
+}
+
+function openUpliftCalc(){
+  const picker = document.getElementById('topoffPicker');
+  if(picker) picker.classList.remove('on');
+  pendingTopoff = null;
+  const uc = document.getElementById('upliftCalc');
+  if(!uc) return;
+  uc.classList.add('on');
+  const btns = document.getElementById('ucLegBtns');
+  if(btns){
+    btns.innerHTML = [0,1,2,3,4,5].map(i=>{
+      const up = legHasUpstream(i);
+      const cls = up ? 'leg-pick' : 'leg-pick muted';
+      return '<button type="button" class="'+cls+'" data-uc-leg="'+i+'">Leg '+(i+1)+'</button>';
+    }).join('');
+  }
+  refreshUpliftCalc();
+  setTimeout(()=>document.getElementById('ucCurrent')?.focus(), 50);
+}
+
+function applyUpliftCalcToLeg(legIndex){
+  const r = refreshUpliftCalc();
+  if(!r || r.needLbs <= 0){
+    showToast('No uplift to send', true);
+    return;
+  }
+  const before = snapshotFuel();
+  histPast.push(before);
+  if(histPast.length > HIST_MAX) histPast.shift();
+  histFuture = [];
+
+  const i = legIndex;
+  const gal = r.gal;
+  const lbs = r.lbs;
+  if(i === 0){
+    const prevLbs = legs[0].lbs || 0;
+    legs[0].gal = gal;
+    legs[0].lbs = lbs;
+    // Match leg-1 uplift behavior: adjust takeoff by delta
+    const delta = lbs - prevLbs;
+    legs[0].takeoff = (legs[0].takeoff || 0) + delta;
+  } else {
+    legs[i].gal = gal;
+    legs[i].lbs = lbs;
+    legs[i].tkoOverride = null;
+    clearDownstreamOverrides(i);
+  }
+  clearUpliftCalcFields();
+  document.getElementById('upliftCalc')?.classList.remove('on');
+  buildRouteTable();
+  updateCollapsedLegs();
+  histSuspended = true;
+  recalc();
+  histSuspended = false;
+  histLast = snapshotFuel();
+  updateHistButtons();
+  saveState();
+  showToast('Leg '+(i+1)+' · +'+gal+' gal ('+lbs+' lbs)');
+}
+
+function clearUpliftCalcFields(){
+  const c = document.getElementById('ucCurrent');
+  const r = document.getElementById('ucRequired');
+  if(c) c.value = '';
+  if(r) r.value = '';
+  refreshUpliftCalc();
+}
+
+function wireTopoff(){
+  const row = document.getElementById('topoffRow');
+  const picker = document.getElementById('topoffPicker');
+  if(row){
+    row.addEventListener('click', e=>{
+      const btn = e.target.closest('[data-topoff]');
+      if(!btn) return;
+      if(btn.dataset.topoff === 'uplift-calc'){
+        openUpliftCalc();
+        return;
+      }
+      document.getElementById('upliftCalc')?.classList.remove('on');
+      openTopoffPicker(btn.dataset.topoff);
+    });
+  }
+  if(picker){
+    picker.addEventListener('click', e=>{
+      const btn = e.target.closest('[data-leg]');
+      if(!btn) return;
+      if(btn.dataset.leg === 'cancel'){
+        picker.classList.remove('on');
+        pendingTopoff = null;
+        return;
+      }
+      applyTopoffToLeg(parseInt(btn.dataset.leg, 10));
+    });
+  }
+  const uc = document.getElementById('upliftCalc');
+  if(uc && !uc.dataset.wired){
+    uc.dataset.wired = '1';
+    uc.addEventListener('input', e=>{
+      if(e.target.id === 'ucCurrent' || e.target.id === 'ucRequired') refreshUpliftCalc();
+    });
+    uc.addEventListener('click', e=>{
+      if(e.target.id === 'ucClose'){
+        uc.classList.remove('on');
+        return;
+      }
+      if(e.target.id === 'ucClear'){
+        clearUpliftCalcFields();
+        return;
+      }
+      const btn = e.target.closest('[data-uc-leg]');
+      if(btn) applyUpliftCalcToLeg(parseInt(btn.dataset.ucLeg, 10));
+    });
+  }
+}
+
+// ---------- Fuel undo / redo (3 steps, fuel data only) ----------
+const HIST_MAX = 3;
+let histPast = [];
+let histFuture = [];
+let histSuspended = false;
+let histLast = null; // last committed snapshot (current baseline)
+
+function snapshotFuel(){
+  // Fuel data only — aircraft toggles are not part of undo
+  return JSON.stringify({ legs: legs });
+}
+
+function applyFuelSnapshot(raw){
+  const s = JSON.parse(raw);
+  legs = s.legs;
+  histSuspended = true;
+  buildRouteTable();
+  buildTotalsTable();
+  buildPayloadTable();
+  applyTailVisibility();
+  updateCollapsedLegs();
+  recalc();
+  histSuspended = false;
+  histLast = snapshotFuel();
+  updateHistButtons();
+}
+
+function pushFuelHistory(){
+  // Commit current baseline → past, then mark current as new baseline
+  if(histSuspended) return;
+  const snap = snapshotFuel();
+  if(histLast != null && histLast === snap) return; // no change
+  if(histLast != null){
+    histPast.push(histLast);
+    if(histPast.length > HIST_MAX) histPast.shift();
+  }
+  histLast = snap;
+  histFuture = [];
+  updateHistButtons();
+}
+
+// Cell-level undo: snapshot when entering a field, commit when leaving if changed
+let histEditBaseline = null;
+
+function onFuelEditFocusIn(e){
+  const el = e.target;
+  if(el.tagName !== 'INPUT') return;
+  if(!el.closest('#viewFuel')) return;
+  // Establish baseline for this edit session
+  if(histLast == null) histLast = snapshotFuel();
+  histEditBaseline = snapshotFuel();
+}
+
+function onFuelEditFocusOut(e){
+  const el = e.target;
+  if(el.tagName !== 'INPUT') return;
+  if(!el.closest('#viewFuel')) return;
+  if(histSuspended) return;
+  if(histEditBaseline == null) return;
+  const now = snapshotFuel();
+  if(now !== histEditBaseline){
+    // Push state as it was when we entered the cell
+    histPast.push(histEditBaseline);
+    if(histPast.length > HIST_MAX) histPast.shift();
+    histLast = now;
+    histFuture = [];
+    updateHistButtons();
+  }
+  histEditBaseline = null;
+}
+
+function updateHistButtons(){
+  const u = document.getElementById('undoBtn');
+  const r = document.getElementById('redoBtn');
+  if(u) u.disabled = histPast.length === 0;
+  if(r) r.disabled = histFuture.length === 0;
+}
+
+function undoFuel(){
+  // If still editing a cell, first Undo cancels that edit (full cell restore)
+  if(histEditBaseline != null){
+    const now = snapshotFuel();
+    if(now !== histEditBaseline){
+      histFuture = [];
+      applyFuelSnapshot(histEditBaseline);
+      histEditBaseline = null;
+      return;
+    }
+    histEditBaseline = null;
+  }
+  if(!histPast.length) return;
+  const current = snapshotFuel();
+  histFuture.push(current);
+  if(histFuture.length > HIST_MAX) histFuture.shift();
+  const prev = histPast.pop();
+  applyFuelSnapshot(prev);
+}
+
+function redoFuel(){
+  if(!histFuture.length) return;
+  const current = snapshotFuel();
+  histPast.push(current);
+  if(histPast.length > HIST_MAX) histPast.shift();
+  const next = histFuture.pop();
+  applyFuelSnapshot(next);
+}
+
+
+document.addEventListener('focusin', onFuelEditFocusIn);
+document.addEventListener('focusout', onFuelEditFocusOut);
+
+
+function buildPlanText(){
+  const tails = TAILS.filter(t => visibleTails.has(t));
+  const lines = [];
+  lines.push('FUEL PLAN · ' + (tails.join(', ') || '—'));
+  for(let i = 0; i < 6; i++){
+    if(!hasLegData(i)) continue;
+    const fr = (i===0 ? (legs[i].from || '') : (legs[i].from || legs[i-1].to || ''));
+    const to = legs[i].to || '';
+    const tko = getTakeoffForLeg(i);
+    const burn = legs[i].burn || 0;
+    const ldg = tko - burn;
+    const gal = legs[i].gal ? (Math.round(legs[i].gal * 10) / 10) : 0;
+    const lbs = Math.round(legs[i].lbs || 0);
+    const pax = legs[i].pax || 0;
+    const bags = legs[i].bags || 0;
+    let line = (i+1)+' '+(fr||'—')+'→'+(to||'—');
+    line += '  T/O '+Math.round(tko)+'  Burn '+Math.round(burn)+'  Ldg '+Math.round(ldg);
+    if(lbs) line += '  Uplift '+gal+' gal ('+lbs+' lbs)';
+    line += '  Pax '+pax+'  Bags '+bags;
+    lines.push(line);
+    const paxW = pax * 200;
+    const bagsW = bags;
+    tails.forEach(t=>{
+      if(!limits[t]) return;
+      const totTo = limits[t].bow + paxW + bagsW + tko;
+      const avail = limits[t].mtow - totTo;
+      lines.push('   '+t+' avail T/O '+Math.round(avail)+' lbs');
+    });
+  }
+  if(lines.length === 1) lines.push('(no leg data)');
+  return lines.join('\n');
+}
+
+async function sharePlan(){
+  const text = buildPlanText();
+  try{
+    if(navigator.share){
+      await navigator.share({ title: 'Fuel Plan', text: text });
+      showToast('Shared');
+      return;
+    }
+  } catch(e){
+    if(e && e.name === 'AbortError') return;
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Plan copied — paste into Messages or Mail');
+  } catch(e2){
+    // last resort
+    prompt('Copy fuel plan:', text);
+  }
+}
+
+document.getElementById('shareBtn').addEventListener('click', ()=>sharePlan());
+document.getElementById('undoBtn').addEventListener('click', (e)=>{ e.preventDefault(); undoFuel(); });
+document.getElementById('redoBtn').addEventListener('click', (e)=>{ e.preventDefault(); redoFuel(); });
+
+
+
+// ---------- View switcher ----------
+(function(){
+  const tabFuel = document.getElementById('tabFuel');
+  const tabHobbs = document.getElementById('tabHobbs');
+  const viewFuel = document.getElementById('viewFuel');
+  const viewHobbs = document.getElementById('viewHobbs');
+  function showView(which){
+    const fuel = which === 'fuel';
+    viewFuel.classList.toggle('on', fuel);
+    viewHobbs.classList.toggle('on', !fuel);
+    tabFuel.className = fuel ? 'active-fuel' : '';
+    tabHobbs.className = fuel ? '' : 'active-hobbs';
+    try { localStorage.setItem(STORAGE_KEY + '_view', which); } catch(e){}
+  }
+  tabFuel.addEventListener('click', () => showView('fuel'));
+  tabHobbs.addEventListener('click', () => showView('hobbs'));
+  // expose for init
+  window._showView = showView;
+})();
+
+// ---------- Next Leg (two-tap, carry Stop → Start) ----------
+(function(){
+  const nextBtn = document.getElementById('nextLegBtn');
+  if(!nextBtn) return;
+  let nArmed = false, nTimer = null;
+  nextBtn.addEventListener('click', ()=>{
+    if(!nArmed){
+      nArmed = true;
+      nextBtn.textContent = 'Tap again';
+      nextBtn.classList.add('confirming');
+      clearTimeout(nTimer);
+      nTimer = setTimeout(()=>{
+        nArmed = false;
+        nextBtn.textContent = 'Next Leg';
+        nextBtn.classList.remove('confirming');
+      }, 3000);
+    } else {
+      clearTimeout(nTimer);
+      nArmed = false;
+      nextBtn.textContent = 'Next Leg';
+      nextBtn.classList.remove('confirming');
+      const stopVal = document.getElementById('hobbsStop').value;
+      document.getElementById('hobbsStart').value = stopVal || '';
+      document.getElementById('hobbsStop').value = '';
+      document.getElementById('taxiAllow').value = '0.2';
+      document.getElementById('flightTime').textContent = '—';
+      document.getElementById('blockTime').textContent = '—';
+      document.querySelectorAll('[data-oooi]').forEach(el => el.value = '');
+      updateHobbsDerived();
+      if(typeof updateDoubleCheck==='function') updateDoubleCheck();
+      saveState();
+      if(window._hubNextLeg) window._hubNextLeg();
+    }
+  });
+})();
+
+
+
+// Place cursor at end of field when focusing (better for editing numbers)
+document.addEventListener('focusin', e=>{
+  const el = e.target;
+  if(el.tagName !== 'INPUT') return;
+  // Airport codes still benefit from end-cursor when appending
+  try {
+    const len = el.value ? el.value.length : 0;
+    // setSelectionRange works on text-like inputs; delay so mobile focus completes
+    setTimeout(()=>{
+      if(document.activeElement === el){
+        el.setSelectionRange(len, len);
+      }
+    }, 0);
+  } catch(err) {}
+});
+
+// ---------- Trip Sheet PDF Import ----------
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+}
+
+let pendingImport = null; // { tail, legs: [{num, from, to, pax}] }
+
+async function extractPdfText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let fullText = '';
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    let lastY = null, line = '';
+    for(const item of content.items){
+      const y = item.transform[5];
+      if(lastY !== null && Math.abs(y - lastY) > 2){
+        fullText += line + '\n';
+        line = '';
+      }
+      line += item.str + ' ';
+      lastY = y;
+    }
+    fullText += line + '\n\n';
+  }
+  return fullText;
+}
+
+function detectTail(text){
+  // Primary: look for one of our known fleet tails anywhere in the extracted text,
+  // tolerant of stray whitespace/newlines between characters (PDF text extraction
+  // sometimes splits or reorders "label: value" pairs that are adjacent on the page).
+  for(const t of TAILS){
+    const pattern = t.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
+    if(new RegExp(pattern, 'i').test(text)) return t;
+  }
+  // Fallback: whatever literally follows a "TAIL NUMBER:" label, even if it's not
+  // a tail we recognize (still useful to show in the preview).
+  const m = text.match(/TAIL NUMBER:\s*([A-Z0-9]+)/i);
+  return m ? m[1].toUpperCase() : null;
+}
+
+function parseTripSheet(text){
+  const out = { tail: null, legs: [] };
+
+  out.tail = detectTail(text);
+
+  const legHeaderRe = /LEG\s+(\d+)\s+PAX\b/gi;
+  const marks = [];
+  let hm;
+  while((hm = legHeaderRe.exec(text)) !== null){
+    marks.push({ num: parseInt(hm[1], 10), start: hm.index });
+  }
+
+  for(let idx = 0; idx < marks.length; idx++){
+    const start = marks[idx].start;
+    const end = (idx + 1 < marks.length) ? marks[idx + 1].start : text.length;
+    const chunk = text.slice(start, end);
+
+    const airportRe = /\b([A-Z]{3,4})\s*\(/g;
+    const matches = [];
+    let am;
+    while((am = airportRe.exec(chunk)) !== null && matches.length < 2){
+      matches.push(am);
+    }
+    if(matches.length < 2) continue;
+
+    const from = matches[0][1];
+    const to = matches[1][1];
+
+    const afterSecond = matches[1].index + matches[1][0].length;
+    const zone = chunk.slice(afterSecond, afterSecond + 400);
+    const wkEnd = zone.search(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/);
+    const paxZone = wkEnd >= 0 ? zone.slice(0, wkEnd) : zone;
+    const paxMatch = paxZone.match(/(?<!-)\b(\d{1,2})\b/);
+    const pax = paxMatch ? parseInt(paxMatch[1], 10) : null;
+
+    out.legs.push({ num: marks[idx].num, from, to, pax });
+  }
+
+  return out;
+}
+
+function renderImportPreview(parsed){
+  const panel = document.getElementById('importPreviewPanel');
+  const tailLine = document.getElementById('importTailLine');
+  const body = document.getElementById('importPreviewBody');
+
+  const knownTail = parsed.tail && TAILS.includes(parsed.tail);
+  if(parsed.tail){
+    tailLine.textContent = knownTail
+      ? `Aircraft detected: ${parsed.tail} — will be selected on apply.`
+      : `Aircraft detected: ${parsed.tail} — not in your fleet list, select manually.`;
+  } else {
+    tailLine.textContent = 'No tail number detected — select the aircraft manually.';
+  }
+
+  const capped = parsed.legs.slice(0, 6);
+  if(parsed.legs.length > 6){
+    showToast('Trip sheet has more than 6 legs — only the first 6 were loaded', true);
+  }
+
+  body.innerHTML = capped.map((leg, i) => `
+    <tr data-import-row="${i}">
+      <td class="label">${leg.num || (i+1)}</td>
+      <td><input class="txt" data-imp="from" value="${leg.from || ''}"></td>
+      <td><input class="txt" data-imp="to" value="${leg.to || ''}"></td>
+      <td><input data-imp="pax" value="${leg.pax != null ? leg.pax : ''}" inputmode="numeric"></td>
+    </tr>
+  `).join('');
+
+  if(!capped.length){
+    body.innerHTML = `<tr><td colspan="4" class="label">No legs found — this trip sheet's layout may not match what the parser expects.</td></tr>`;
+  }
+
+  pendingImport = { tail: parsed.tail, knownTail, legCount: capped.length };
+  panel.style.display = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function applyImportedLegs(){
+  const rows = document.querySelectorAll('#importPreviewBody tr[data-import-row]');
+  if(!rows.length){
+    document.getElementById('importPreviewPanel').style.display = 'none';
+    return;
+  }
+
+  rows.forEach((tr, i) => {
+    const from = tr.querySelector('[data-imp="from"]').value.trim().toUpperCase();
+    const to = tr.querySelector('[data-imp="to"]').value.trim().toUpperCase();
+    const paxRaw = tr.querySelector('[data-imp="pax"]').value.trim();
+    const pax = paxRaw === '' ? null : (parseInt(paxRaw, 10) || 0);
+
+    if(i === 0 && from) legs[0].from = from;
+    if(to) legs[i].to = to;
+    if(pax !== null) legs[i].pax = pax;
+  });
+
+  if(pendingImport && pendingImport.tail && pendingImport.knownTail){
+    visibleTails = new Set([pendingImport.tail]);
+  }
+
+  if(rows.length > 2) showExtraLegs = true;
+
+  buildTailToggles();
+  buildRouteTable();
+  buildTotalsHead();
+  buildTotalsTable();
+  buildPayloadHead();
+  buildPayloadTable();
+  buildLimitsGrid();
+  applyTailVisibility();
+  updateTopoffButtons();
+  recalc();
+  saveState();
+
+  document.getElementById('importPreviewPanel').style.display = 'none';
+  showToast(`Imported ${rows.length} leg${rows.length===1?'':'s'}` + (pendingImport && pendingImport.knownTail ? ` · ${pendingImport.tail} selected` : ''));
+  pendingImport = null;
+}
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importFile').click();
+});
+
+document.getElementById('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!window.pdfjsLib){
+    showToast('PDF reader failed to load — check your internet connection and try again', true);
+    return;
+  }
+  showToast('Reading trip sheet…');
+  try{
+    const text = await extractPdfText(file);
+    const parsed = parseTripSheet(text);
+    if(!parsed.legs.length){
+      showToast('Could not find leg data in this PDF', true);
+      return;
+    }
+    renderImportPreview(parsed);
+  } catch(err){
+    console.error(err);
+    showToast('Failed to read that PDF', true);
+  }
+});
+
+document.getElementById('importApplyBtn').addEventListener('click', applyImportedLegs);
+document.getElementById('importCancelBtn').addEventListener('click', () => {
+  document.getElementById('importPreviewPanel').style.display = 'none';
+  pendingImport = null;
+});
+
+
+// ---------- Init ----------
+loadDefaults();
+const hadSaved = loadState(); // restores legs, limits, visibleTails, limitsLocked
+buildTailToggles();
+buildRouteTable();
+buildTotalsHead();
+buildTotalsTable();
+buildPayloadHead();
+buildPayloadTable();
+buildLimitsGrid();
+wireUnlockLimits();
+wireTopoff();
+updateTopoffButtons();
+wireLegsToggle();
+recalc();
+if(typeof histLast !== "undefined" && histLast == null && typeof snapshotFuel === "function") histLast = snapshotFuel();
+if(typeof updateHistButtons === "function") updateHistButtons();
+wireHobbsOOOI();
+if(hadSaved) restoreHobbs();
+else updateHobbsDerived();
+if(typeof updateDoubleCheck==='function') updateDoubleCheck();
+// Default view = fuel unless user last left on hobbs
+const HUB_MODE = document.body.getAttribute('data-mode') || 'fuel';
+document.getElementById('modeTitle').textContent = HUB_MODE === 'oooi' ? 'Hobbs \u00b7 OOOI' : 'Fuel Burn';
+if(window._showView) window._showView(HUB_MODE === 'oooi' ? 'hobbs' : 'fuel');
+
+// ---------- Crew Hub: shared trip ----------
+if(HUB_MODE === 'fuel' && window.HubTrips){
+  HubTrips.bar('fuelTripBar', {
+    loadLabel: 'Load legs',
+    hint: 'Loads the legs from this trip into the route table. You will see a preview first.',
+    onLoad: function(t){
+      if(!t) return;
+      const parsed = parseTripSheet(t.text);
+      if(!parsed.legs.length){ showToast('Could not find leg data in this trip', true); return; }
+      renderImportPreview(parsed);
+    }
+  });
+}
+if(HUB_MODE === 'oooi' && window.HubTrips){
+  const LEGKEY = 'crewhub_hobbs_leg';
+  const legSel = document.getElementById('legSel');
+  const planBox = document.getElementById('planBox');
+  const thr = document.getElementById('eteThr');
+  const planLine = document.getElementById('planLine');
+  try { const v = localStorage.getItem('crewhub_hobbs_thr'); if(v) thr.value = v; } catch(e){}
+  const fmt1 = x => (Math.round(x * 10) / 10).toFixed(1);
+
+  function legIndex(trip){
+    try {
+      const o = JSON.parse(localStorage.getItem(LEGKEY));
+      if(o && trip && o.trip === trip.id && o.i < trip.legs.length) return o.i;
+    } catch(e){}
+    return 0;
+  }
+  function saveLeg(){
+    const t = HubTrips.active(); if(!t) return;
+    try { localStorage.setItem(LEGKEY, JSON.stringify({ trip: t.id, i: legSel.selectedIndex })); } catch(e){}
+  }
+  function renderLegs(){
+    const t = HubTrips.active();
+    if(!t){ planBox.style.display = 'none'; return; }
+    planBox.style.display = '';
+    legSel.innerHTML = t.legs.map((l, i) =>
+      '<option value="' + i + '">Leg ' + (i + 1) + ' \u00b7 ' + l.orig + ' \u2192 ' + l.dest +
+      (l.eteMin != null ? ' \u00b7 ETE ' + HubTrips.eteText(l.eteMin) : '') + '</option>').join('');
+    legSel.selectedIndex = legIndex(t);
+    updateEte();
+  }
+  function actualFlight(){
+    const st = parseFloat(document.getElementById('hobbsStart').value);
+    const sp = parseFloat(document.getElementById('hobbsStop').value);
+    if(!isNaN(st) && !isNaN(sp) && sp >= st) return { v: Math.round((sp - st) * 1000) / 1000, src: 'Hobbs' };
+    const off = getOOOI('off'), on = getOOOI('on');
+    const h = hoursBetween(off, on);
+    if(h != null) return { v: h, src: 'OOOI' };
+    return null;
+  }
+  function updateEte(){
+    const t = HubTrips.active();
+    if(!t){ return; }
+    const leg = t.legs[legSel.selectedIndex];
+    if(!leg || leg.eteMin == null){ planLine.className = 'check-status idle'; planLine.textContent = 'No ETE on the trip sheet for this leg.'; return; }
+    const planned = leg.eteMin / 60;
+    const limit = parseFloat(thr.value); const lim = isNaN(limit) ? 0.3 : limit;
+    const act = actualFlight();
+    const base = 'Trip sheet ETE ' + HubTrips.eteText(leg.eteMin) + ' (' + fmt1(planned) + ' hr)';
+    if(!act){ planLine.className = 'check-status idle'; planLine.textContent = base + '. Enter Hobbs or OOOI to compare.'; return; }
+    const diff = act.v - planned;
+    if(Math.abs(diff) <= lim + 1e-9){
+      planLine.className = 'check-status ok';
+      planLine.textContent = '\u2713 ' + act.src + ' ' + fmt1(act.v) + ' hr is within ' + fmt1(lim) + ' of ETE (' + HubTrips.eteText(leg.eteMin) + ')';
+    } else if(diff > 0){
+      planLine.className = 'check-status bad';
+      planLine.textContent = act.src + ' ' + fmt1(act.v) + ' hr is ' + fmt1(diff) + ' hr over the ETE (' + HubTrips.eteText(leg.eteMin) + '). Check the times.';
+    } else {
+      planLine.className = 'check-status warn';
+      planLine.textContent = act.src + ' ' + fmt1(act.v) + ' hr is ' + fmt1(-diff) + ' hr under the ETE (' + HubTrips.eteText(leg.eteMin) + '). Check the times.';
+    }
+  }
+  legSel.addEventListener('change', () => { saveLeg(); updateEte(); });
+  thr.addEventListener('input', () => { try { localStorage.setItem('crewhub_hobbs_thr', thr.value); } catch(e){} updateEte(); });
+  document.addEventListener('input', () => setTimeout(updateEte, 0));
+  document.addEventListener('change', () => setTimeout(updateEte, 0));
+  window._hubNextLeg = function(){
+    if(legSel.selectedIndex < legSel.options.length - 1){ legSel.selectedIndex++; saveLeg(); }
+    updateEte();
+  };
+  HubTrips.bar('hobbsTripBar', { onSelect: renderLegs });
+  window.addEventListener('hubtrips', renderLegs);
+  renderLegs();
+}
+</script>
+</body>
+</html>
