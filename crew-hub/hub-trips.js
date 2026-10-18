@@ -39,6 +39,16 @@
     s.trips = s.trips.filter(function(t){ return t.id !== id; });
     if(s.active === id) s.active = s.trips.length ? s.trips[0].id : null;
     save(s);
+    // each trip has its own saved work in every tool; drop it with the trip
+    try {
+      var drop = [];
+      for(var i=0;i<localStorage.length;i++){
+        var k = localStorage.key(i);
+        if(k && (k.indexOf('crewhub_snap_') === 0 && k.slice(-id.length - 1) === '_' + id ||
+                 k === 'fuelBurnCalculator_v1__' + id)) drop.push(k);
+      }
+      drop.forEach(function(k){ localStorage.removeItem(k); });
+    } catch(e){}
   }
 
   // ---------- PDF reading ----------
@@ -184,6 +194,56 @@
     return { ok: true, trip: trip, replaced: replaced };
   }
 
+
+  // ---------- Per-trip saved work for the form-style tools ----------
+  function serialize(sec){
+    var clone = sec.cloneNode(true);
+    var o = sec.querySelectorAll('input,select,textarea'), c = clone.querySelectorAll('input,select,textarea');
+    for(var i=0;i<o.length;i++){
+      var el = o[i], d = c[i];
+      if(el.tagName === 'SELECT'){
+        for(var k=0;k<d.options.length;k++){
+          if(el.options[k].selected) d.options[k].setAttribute('selected',''); else d.options[k].removeAttribute('selected');
+        }
+      } else if(el.tagName === 'TEXTAREA'){ d.textContent = el.value; }
+      else if(el.type === 'checkbox' || el.type === 'radio'){ if(el.checked) d.setAttribute('checked',''); else d.removeAttribute('checked'); }
+      else if(el.type === 'file'){ /* skip */ }
+      else d.setAttribute('value', el.value);
+    }
+    return clone.innerHTML;
+  }
+  // o: { sections(): [elements], getExtra(): obj, setExtra(obj), afterRestore() }
+  function persist(tool, o){
+    var t = active();
+    var tid = t ? t.id : '_none';
+    var key = 'crewhub_snap_' + tool + '_' + tid;
+    function has(){ try { return localStorage.getItem(key) !== null; } catch(e){ return false; } }
+    function save(){
+      try {
+        localStorage.setItem(key, JSON.stringify({ s: o.sections().map(serialize), x: o.getExtra ? o.getExtra() : {}, at: Date.now() }));
+      } catch(e){}
+    }
+    function restore(){
+      try {
+        var snap = JSON.parse(localStorage.getItem(key));
+        if(!snap) return false;
+        var secs = o.sections();
+        secs.forEach(function(sec, i){ if(snap.s[i] != null) sec.innerHTML = snap.s[i]; });
+        if(o.setExtra) o.setExtra(snap.x || {});
+        if(o.afterRestore) o.afterRestore();
+        return true;
+      } catch(e){ return false; }
+    }
+    function arm(){
+      var tm = null;
+      function sched(){ clearTimeout(tm); tm = setTimeout(save, 400); }
+      ['input','change','click'].forEach(function(ev){ document.addEventListener(ev, sched, true); });
+      window.addEventListener('pagehide', save);
+      document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'hidden') save(); });
+    }
+    return { has: has, save: save, restore: restore, arm: arm, tripId: tid };
+  }
+
   // ---------- Small trip switcher for the tools ----------
   var cssDone = false;
   function injectCss(){
@@ -243,6 +303,6 @@
 
   window.HubTrips = {
     MAX: MAX, list: list, active: active, setActive: setActive, remove: remove,
-    importFile: importFile, parseSummary: parseSummary, bar: bar, eteText: eteText, dateLabel: dateLabel
+    importFile: importFile, persist: persist, parseSummary: parseSummary, bar: bar, eteText: eteText, dateLabel: dateLabel
   };
 })();

@@ -747,7 +747,10 @@ let suppressRecalc = false; // prevents feedback loops when editing landing ↔ 
 let limitsLocked = true;
 let showExtraLegs = false;
 
-const STORAGE_KEY = 'fuelBurnCalculator_v1';
+const BASE_KEY = 'fuelBurnCalculator_v1';
+const HUB_TRIP = (window.HubTrips && HubTrips.active()) || null;
+// each trip keeps its own fuel plan and Hobbs/OOOI; with no trip it uses the original shared slot
+const STORAGE_KEY = HUB_TRIP ? BASE_KEY + '__' + HUB_TRIP.id : BASE_KEY;
 
 function loadDefaults(){
   legs = DEFAULT_LEGS.map(l => ({...l, lbs: l.gal * 6.7}));
@@ -784,7 +787,18 @@ function saveState(){
 function loadState(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return false;
+    if(!raw){
+      // First time opening this trip: keep the aircraft limits you already set, start the legs blank.
+      if(STORAGE_KEY !== BASE_KEY){
+        const g = JSON.parse(localStorage.getItem(BASE_KEY) || 'null');
+        if(g){
+          if(g.limits){ limits = g.limits; TAILS.forEach(t=>{ if(!limits[t]) limits[t] = JSON.parse(JSON.stringify(DEFAULT_LIMITS[t])); }); }
+          if(g.visibleTails && g.visibleTails.length){ const v = g.visibleTails.filter(t => TAILS.includes(t)); if(v.length) visibleTails = new Set(v); }
+          if(typeof g.limitsLocked === 'boolean') limitsLocked = g.limitsLocked;
+        }
+      }
+      return false;
+    }
     const state = JSON.parse(raw);
     if(!state || !state.legs) return false;
 
@@ -2371,16 +2385,21 @@ if(window._showView) window._showView(HUB_MODE === 'oooi' ? 'hobbs' : 'fuel');
 
 // ---------- Crew Hub: shared trip ----------
 if(HUB_MODE === 'fuel' && window.HubTrips){
+  function hubLoadLegs(t, auto){
+    if(!t) return;
+    const parsed = parseTripSheet(t.text);
+    if(!parsed.legs.length){ if(!auto) showToast('Could not find leg data in this trip', true); return; }
+    renderImportPreview(parsed);
+    if(auto){ applyImportedLegs(); }
+  }
   HubTrips.bar('fuelTripBar', {
-    loadLabel: 'Load legs',
-    hint: 'Loads the legs from this trip into the route table. You will see a preview first.',
-    onLoad: function(t){
-      if(!t) return;
-      const parsed = parseTripSheet(t.text);
-      if(!parsed.legs.length){ showToast('Could not find leg data in this trip', true); return; }
-      renderImportPreview(parsed);
-    }
+    loadLabel: 'Refill legs',
+    hint: 'Each trip keeps its own fuel plan. Refill shows a preview of the trip sheet legs first.',
+    onLoad: t => hubLoadLegs(t, false),
+    onSelect: () => { saveState(); location.reload(); }
   });
+  // first time on this trip: fill the legs from its trip sheet
+  if(HUB_TRIP && !hadSaved){ hubLoadLegs(HUB_TRIP, true); }
 }
 if(HUB_MODE === 'oooi' && window.HubTrips){
   const LEGKEY = 'crewhub_hobbs_leg';
@@ -2451,8 +2470,7 @@ if(HUB_MODE === 'oooi' && window.HubTrips){
     if(legSel.selectedIndex < legSel.options.length - 1){ legSel.selectedIndex++; saveLeg(); }
     updateEte();
   };
-  HubTrips.bar('hobbsTripBar', { onSelect: renderLegs });
-  window.addEventListener('hubtrips', renderLegs);
+  HubTrips.bar('hobbsTripBar', { onSelect: () => { saveState(); location.reload(); } });
   renderLegs();
 }
 </script>

@@ -130,13 +130,8 @@
   </header>
 
   <h2 style="margin-top:0">Trips</h2>
-  <p class="note">Import up to 3 trip sheets. The selected trip loads into every tool.</p>
+  <p class="note">Pick a trip. Every tool below opens that trip's own fuel plan, Hobbs times and emails.</p>
   <div class="trips" id="tripList"></div>
-  <div class="import-row">
-    <button type="button" class="btn" id="importBtn">Import trip sheet</button>
-    <span id="importMsg" role="status" aria-live="polite"></span>
-  </div>
-  <input type="file" id="tripFile" accept="application/pdf" hidden>
 
   <h2>In the cockpit</h2>
   <p class="note">Saved on this device. Works with no signal.</p>
@@ -164,12 +159,20 @@
     </a>
   </div>
 
+  <h2>Add a trip</h2>
+  <p class="note">Import a trip sheet PDF. You can keep up to 3 trips, each with its own saved work.</p>
+  <div class="import-row">
+    <button type="button" class="btn" id="importBtn">Import trip sheet</button>
+    <span id="importMsg" role="status" aria-live="polite"></span>
+  </div>
+  <input type="file" id="tripFile" accept="application/pdf" hidden>
+
   <div class="install" id="install">
     <strong>Put it on your Home Screen.</strong> In Safari tap Share, then Add to Home Screen. Open it once with signal so the cockpit tools are saved for offline use.
   </div>
 
   <footer>
-    <span id="ver">Hub 1.1.0</span>
+    <span id="ver">Hub 1.2.0</span>
     <button type="button" id="refresh">Update this copy</button>
   </footer>
 </div>
@@ -178,7 +181,7 @@
 <script src="hub-trips.js"></script>
 <script>
 (function(){
-  var VERSION='1.1.0';
+  var VERSION='1.2.0';
   var st=document.getElementById('status'), tx=document.getElementById('statusText');
   var ready=false;
 
