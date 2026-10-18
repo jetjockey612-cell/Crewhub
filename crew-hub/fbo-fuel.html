@@ -190,7 +190,7 @@
 </style>
 </head>
 <body>
-<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">FBO &amp; Fuel Release</span><span class="hubver">hub 1.3.1</span></nav>
+<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">FBO &amp; Fuel Release</span><span class="hubver">hub 1.3.3</span></nav>
 <div class="wrap">
 
   <header class="top">
@@ -276,7 +276,7 @@
     <div id="emailCards"></div>
   </div>
 
-  <footer class="note">Fill in what applies · leave anything blank to skip it<br>v1.3</footer>
+  <footer class="note">Fill in what applies · leave anything blank to skip it<br>v1.4</footer>
 
   <div class="confirm-overlay" id="confirmOverlay">
     <div class="confirm-box">
@@ -640,6 +640,7 @@ function generate(){
   const tail = valueOf('tail') || '[TAIL NUMBER]';
 
   const cards = [];
+  const releases = [];
 
   document.querySelectorAll('.arrival').forEach((arr, idx) => {
     const icao = arr.querySelector('.a-icao').value.trim().toUpperCase();
@@ -690,35 +691,68 @@ function generate(){
       });
     }
 
-    // ---- Fuel release email ----
+    // ---- Fuel release: collected here, then combined per vendor after the loop ----
     if(fuelRelease){
-      const vendor = arr.querySelector('.a-fr-vendor').value;
-      const vendorEmail = arr.querySelector('.a-fr-vendor-email').value.trim();
-      const frDate = arr.querySelector('.a-fr-date').value.trim() || day;
-      const frTime = arr.querySelector('.a-fr-time').value.trim() || time;
-      const open = arr.querySelector('.a-fr-open').checked;
-      const frGallons = arr.querySelector('.a-fr-gallons').value.trim();
+      releases.push({
+        idx, icao, fboName,
+        vendor: arr.querySelector('.a-fr-vendor').value,
+        vendorEmail: arr.querySelector('.a-fr-vendor-email').value.trim(),
+        date: arr.querySelector('.a-fr-date').value.trim() || day,
+        time: arr.querySelector('.a-fr-time').value.trim() || time,
+        open: arr.querySelector('.a-fr-open').checked,
+        gallons: arr.querySelector('.a-fr-gallons').value.trim()
+      });
+    }
+  });
 
-      let fl = [];
-      fl.push('Hello,');
-      fl.push('');
-      fl.push('Please issue a fuel release for the following:');
-      fl.push('');
-      fl.push(`Date: ${frDate || '[date]'}`);
-      fl.push(`Time: ${frTime || '[time]'} local`);
+  // ---- One fuel release email per vendor; several stops with the same vendor go in a single email ----
+  const groups = [];
+  releases.forEach(r => {
+    const key = r.vendor + '|' + r.vendorEmail.toLowerCase();
+    let g = groups.find(x => x.key === key);
+    if(!g){ g = { key, vendor: r.vendor, vendorEmail: r.vendorEmail, stops: [] }; groups.push(g); }
+    g.stops.push(r);
+  });
+  const fuelLine = r => r.open ? 'Amount open — please advise based on availability' : (r.gallons || '[gallons]');
+  groups.forEach(g => {
+    let fl = ['Hello,', ''];
+    if(g.stops.length === 1){
+      const r = g.stops[0];
+      fl.push('Please issue a fuel release for the following:', '');
+      fl.push(`Date: ${r.date || '[date]'}`);
+      fl.push(`Time: ${r.time || '[time]'} local`);
       fl.push(`Aircraft: ${tail}`);
-      fl.push(`FBO: ${fboName || '[FBO]'}`);
-      fl.push(`Airport: ${icao}`);
-      fl.push(`Fuel requested: ${open ? 'Amount open — please advise based on availability' : (frGallons || '[gallons]')}`);
-      fl.push('');
-      fl.push('Please confirm once the release has been issued.');
-
+      fl.push(`FBO: ${r.fboName || '[FBO]'}`);
+      fl.push(`Airport: ${r.icao}`);
+      fl.push(`Fuel requested: ${fuelLine(r)}`);
+      fl.push('', 'Please confirm once the release has been issued.');
       cards.push({
         type: 'vendor',
-        title: `LEG ${idx+1} · ${icao} — Fuel release to ${vendor}`,
-        sub: vendorEmail || `${vendor} contact email not entered`,
-        to: vendorEmail,
-        subject: `Fuel Release Request – ${icao} – ${tail}`,
+        title: `LEG ${r.idx+1} · ${r.icao} — Fuel release to ${g.vendor}`,
+        sub: g.vendorEmail || `${g.vendor} contact email not entered`,
+        to: g.vendorEmail,
+        subject: `Fuel Release Request – ${r.icao} – ${tail}`,
+        body: fl.join('\n')
+      });
+    } else {
+      const codes = g.stops.map(r => r.icao);
+      fl.push(`Please issue fuel releases for the following ${g.stops.length} stops:`, '');
+      fl.push(`Aircraft: ${tail}`, '');
+      g.stops.forEach((r, i) => {
+        fl.push(`${i+1}) ${r.icao}`);
+        fl.push(`   FBO: ${r.fboName || '[FBO]'}`);
+        fl.push(`   Date: ${r.date || '[date]'}`);
+        fl.push(`   Time: ${r.time || '[time]'} local`);
+        fl.push(`   Fuel requested: ${fuelLine(r)}`);
+        fl.push('');
+      });
+      fl.push('Please confirm once the releases have been issued.');
+      cards.push({
+        type: 'vendor',
+        title: `LEGS ${g.stops.map(r => r.idx+1).join(', ')} · ${codes.join(', ')} — Fuel release to ${g.vendor}`,
+        sub: (g.vendorEmail || `${g.vendor} contact email not entered`) + ` · ${g.stops.length} stops in one email`,
+        to: g.vendorEmail,
+        subject: `Fuel Release Request – ${codes.join(' / ')} – ${tail}`,
         body: fl.join('\n')
       });
     }

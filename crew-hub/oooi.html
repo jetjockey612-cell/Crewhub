@@ -952,6 +952,7 @@ function onRouteInput(e){
     } else {
       // uplift changed → drop manual override so chain recalculates
       legs[i].tkoOverride = null;
+      legs[i].tkoTarget = null;
     }
     clearDownstreamOverrides(i);
   }
@@ -966,6 +967,7 @@ function onRouteInput(e){
       legs[0].takeoff = (legs[0].takeoff || 0) + delta;
     } else {
       legs[i].tkoOverride = null;
+      legs[i].tkoTarget = null;   // typing the uplift yourself replaces a target takeoff
     }
     clearDownstreamOverrides(i);
   }
@@ -978,7 +980,7 @@ function onRouteInput(e){
     if(raw === ''){
       // blank → clear override (legs 2–6 snap back to calculated)
       if(i===0) legs[0].takeoff = 0;
-      else legs[i].tkoOverride = null;
+      else { legs[i].tkoOverride = null; legs[i].tkoTarget = null; }
       e.target.classList.remove('tko-manual');
       e.target.title = '';
     } else {
@@ -987,8 +989,13 @@ function onRouteInput(e){
         if(i===0){
           legs[0].takeoff = val;
           e.target.classList.remove('tko-manual');
+        } else if(getTakeoffForLeg(i-1) > 0){
+          // Fuel already on board is known from the previous leg: work out the uplift to reach this takeoff
+          legs[i].tkoTarget = val;
+          legs[i].tkoOverride = null;
+          e.target.classList.add('tko-manual');
         } else {
-          legs[i].tkoOverride = val; // manual override
+          legs[i].tkoOverride = val; // nothing known from the previous leg: plain manual override
           e.target.classList.add('tko-manual');
           e.target.title = 'Manual override — clear cell to use calculated takeoff';
         }
@@ -1011,6 +1018,9 @@ function onRouteInput(e){
   }
 
   if(!suppressRecalc) recalc();
+  if(role==='takeoff' && i>0 && legs[i].tkoTarget != null && legs[i].tkoExcess > 0){
+    showToast('Already ' + legs[i].tkoExcess + ' lb above that target. No uplift needed.', true);
+  }
 }
 
 // Helper to get computed takeoff for a leg without full recalc side-effects
@@ -1021,7 +1031,8 @@ function getTakeoffForLeg(i){
   if(i===0) return tko;
   for(let j=1; j<=i; j++){
     const calc = ldg + (legs[j].lbs || 0);
-    tko = (legs[j].tkoOverride != null && legs[j].tkoOverride !== '') ? Number(legs[j].tkoOverride) : calc;
+    if(legs[j].tkoTarget != null){ tko = ldg + Math.max(0, Math.round(legs[j].tkoTarget - ldg)); }
+    else tko = (legs[j].tkoOverride != null && legs[j].tkoOverride !== '') ? Number(legs[j].tkoOverride) : calc;
     ldg = tko - (legs[j].burn || 0);
   }
   return tko;
@@ -1198,7 +1209,7 @@ function clearDownstreamOverrides(fromIndex){
 
 function hasLegData(i){
   if(i === 0) return (legs[0].takeoff || 0) !== 0 || (legs[0].to && legs[0].to.trim()) || legs[0].burn || legs[0].gal;
-  return (legs[i].to && legs[i].to.trim()) || legs[i].burn || legs[i].gal || (legs[i].tkoOverride != null && legs[i].tkoOverride !== '');
+  return (legs[i].to && legs[i].to.trim()) || legs[i].burn || legs[i].gal || (legs[i].tkoOverride != null && legs[i].tkoOverride !== '') || legs[i].tkoTarget != null;
 }
 
 function recalc(){
@@ -1213,7 +1224,20 @@ function recalc(){
       landing[i] = takeoff[i] - (legs[i].burn || 0);
     } else {
       const calc = landing[i-1] + lbs[i];
-      if(legs[i].tkoOverride != null && legs[i].tkoOverride !== ''){
+      if(legs[i].tkoTarget != null){
+        // Target takeoff typed: uplift = target minus what is already on board from the last leg
+        const need = legs[i].tkoTarget - landing[i-1];
+        const up = need > 0 ? Math.round(need) : 0;
+        lbs[i] = up;
+        legs[i].lbs = up;
+        legs[i].gal = Math.round((up / 6.7) * 10) / 10;
+        legs[i].tkoExcess = need < 0 ? Math.round(-need) : 0;
+        takeoff[i] = landing[i-1] + up;
+        const gIn = document.querySelector(`[data-role="gal"][data-i="${i}"]`);
+        const lIn = document.querySelector(`[data-role="lbs"][data-i="${i}"]`);
+        if(gIn && document.activeElement !== gIn) gIn.value = up ? (Math.round(legs[i].gal * 10) / 10).toFixed(1).replace(/\.0$/,'') : '';
+        if(lIn && document.activeElement !== lIn) lIn.value = up ? String(up) : '';
+      } else if(legs[i].tkoOverride != null && legs[i].tkoOverride !== ''){
         takeoff[i] = Number(legs[i].tkoOverride);
       } else if(!hasLegData(i)){
         takeoff[i] = 0;
@@ -1233,9 +1257,11 @@ function recalc(){
     // Update takeoff input — always refresh manual highlight; skip value while typing
     const tkoInput = document.querySelector(`[data-role="takeoff"][data-i="${i}"]`);
     if(tkoInput){
-      const isManual = i>0 && legs[i].tkoOverride != null && legs[i].tkoOverride !== '';
+      const isTarget = i>0 && legs[i].tkoTarget != null;
+      const isManual = isTarget || (i>0 && legs[i].tkoOverride != null && legs[i].tkoOverride !== '');
       tkoInput.classList.toggle('tko-manual', isManual);
-      tkoInput.title = isManual ? 'Manual override — clear cell to use calculated takeoff' : '';
+      ['gal','lbs'].forEach(r=>{ const el=document.querySelector(`[data-role="${r}"][data-i="${i}"]`); if(el){ el.classList.toggle('tko-manual', isTarget && legs[i].lbs>0); } });
+      tkoInput.title = isTarget ? 'Target takeoff — uplift is calculated from fuel on board. Clear cell to go back to manual uplift.' : (isManual ? 'Manual override — clear cell to use calculated takeoff' : '');
       if(document.activeElement !== tkoInput){
         if(hasLegData(i) || (i===0 && takeoff[i])){
           tkoInput.value = takeoff[i] ? takeoff[i].toFixed(0) : '';
