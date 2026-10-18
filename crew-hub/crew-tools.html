@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0d1117">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Crew Tools v3.0</title>
+<title>Fuel Burn</title>
 <style>
   :root{
     --bg:#0d1117;
@@ -187,6 +187,13 @@
 
   /* App switcher */
   .app-switch{display:flex;gap:8px;margin-bottom:16px;margin-top:8px}
+  body[data-mode] #tabFuel, body[data-mode] #tabHobbs{display:none}
+  .app-switch .mode-title{flex:1;display:flex;align-items:center;padding:0 4px;font-size:19px;font-weight:700}
+  .plan-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .plan-row select{flex:1 1 200px;min-width:0;min-height:44px;font-size:16px;padding:0 10px;border-radius:8px;border:1px solid var(--panel-border);background:var(--bg);color:var(--text)}
+  .plan-row label{font-size:13px;color:var(--text-dim);display:flex;align-items:center;gap:6px}
+  .plan-row input{width:56px;min-height:44px;font-size:16px;text-align:center;border-radius:8px;border:1px solid var(--panel-border);background:var(--bg);color:var(--text)}
+  #planLine{margin-top:10px}
   .app-switch .hub-home{flex:0 0 auto;display:flex;align-items:center;padding:0 16px;border:1px solid var(--panel-border);border-radius:10px;background:var(--panel);color:var(--text);font-weight:600;font-size:15px;text-decoration:none;min-height:44px}
   .app-switch .hub-home:active{background:#1d2631}
   .app-switch button{
@@ -463,14 +470,16 @@
 
 </style>
 <script src="pdf.min.js"></script>
+<script src="hub-trips.js"></script>
 </head>
-<body>
+<body data-mode="fuel">
 <div class="app-version" id="appVersion">v3.0</div>
 <div class="toast" id="toast"></div>
 <div class="wrap">
 
   <div class="app-switch">
     <a href="index.html" class="hub-home" aria-label="Back to Crew Hub">&#8249; Home</a>
+    <span class="mode-title" id="modeTitle">Fuel Burn</span>
     <button type="button" id="tabFuel" class="active-fuel">Fuel Burn</button>
     <button type="button" id="tabHobbs">Hobbs · OOOI</button>
   </div>
@@ -487,6 +496,8 @@
       <button class="clear" id="clearBtn">Clear</button>
     </div>
   </header>
+
+  <div id="fuelTripBar"></div>
 
   <div class="panel" id="tailPicker">
     <h2>Aircraft Shown</h2>
@@ -586,7 +597,15 @@
   </div><!-- /viewFuel -->
 
   <div id="viewHobbs" class="view">
-  
+  <div id="hobbsTripBar"></div>
+  <div class="hb" id="planBox" style="display:none;margin-top:-6px">
+    <div class="plan-row" style="margin-top:0">
+      <select id="legSel" aria-label="Trip leg"></select>
+      <label>Flag if off by <input id="eteThr" value="0.3" inputmode="decimal" aria-label="Flag threshold in hours"> hr</label>
+    </div>
+    <div class="check-status idle" id="planLine">Pick a leg to compare with the trip sheet ETE.</div>
+  </div>
+
   <div class="panel" id="hobbsPanel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
       <h2 style="margin:0;" class="hobbs-sky">Hobbs · OOOI</h2>
@@ -2105,6 +2124,7 @@ document.getElementById('redoBtn').addEventListener('click', (e)=>{ e.preventDef
       updateHobbsDerived();
       if(typeof updateDoubleCheck==='function') updateDoubleCheck();
       saveState();
+      if(window._hubNextLeg) window._hubNextLeg();
     }
   });
 })();
@@ -2345,14 +2365,96 @@ if(hadSaved) restoreHobbs();
 else updateHobbsDerived();
 if(typeof updateDoubleCheck==='function') updateDoubleCheck();
 // Default view = fuel unless user last left on hobbs
-function hashView(){ const h=(location.hash||'').replace('#','').toLowerCase(); return (h==='fuel'||h==='hobbs')?h:null; }
-try {
-  const last = localStorage.getItem(STORAGE_KEY + '_view');
-  if(window._showView) window._showView(hashView() || (last === 'hobbs' ? 'hobbs' : 'fuel'));
-} catch(e) {
-  if(window._showView) window._showView(hashView() || 'fuel');
+const HUB_MODE = document.body.getAttribute('data-mode') || 'fuel';
+document.getElementById('modeTitle').textContent = HUB_MODE === 'oooi' ? 'Hobbs \u00b7 OOOI' : 'Fuel Burn';
+if(window._showView) window._showView(HUB_MODE === 'oooi' ? 'hobbs' : 'fuel');
+
+// ---------- Crew Hub: shared trip ----------
+if(HUB_MODE === 'fuel' && window.HubTrips){
+  HubTrips.bar('fuelTripBar', {
+    loadLabel: 'Load legs',
+    hint: 'Loads the legs from this trip into the route table. You will see a preview first.',
+    onLoad: function(t){
+      if(!t) return;
+      const parsed = parseTripSheet(t.text);
+      if(!parsed.legs.length){ showToast('Could not find leg data in this trip', true); return; }
+      renderImportPreview(parsed);
+    }
+  });
 }
-window.addEventListener('hashchange', () => { const v=hashView(); if(v && window._showView) window._showView(v); });
+if(HUB_MODE === 'oooi' && window.HubTrips){
+  const LEGKEY = 'crewhub_hobbs_leg';
+  const legSel = document.getElementById('legSel');
+  const planBox = document.getElementById('planBox');
+  const thr = document.getElementById('eteThr');
+  const planLine = document.getElementById('planLine');
+  try { const v = localStorage.getItem('crewhub_hobbs_thr'); if(v) thr.value = v; } catch(e){}
+  const fmt1 = x => (Math.round(x * 10) / 10).toFixed(1);
+
+  function legIndex(trip){
+    try {
+      const o = JSON.parse(localStorage.getItem(LEGKEY));
+      if(o && trip && o.trip === trip.id && o.i < trip.legs.length) return o.i;
+    } catch(e){}
+    return 0;
+  }
+  function saveLeg(){
+    const t = HubTrips.active(); if(!t) return;
+    try { localStorage.setItem(LEGKEY, JSON.stringify({ trip: t.id, i: legSel.selectedIndex })); } catch(e){}
+  }
+  function renderLegs(){
+    const t = HubTrips.active();
+    if(!t){ planBox.style.display = 'none'; return; }
+    planBox.style.display = '';
+    legSel.innerHTML = t.legs.map((l, i) =>
+      '<option value="' + i + '">Leg ' + (i + 1) + ' \u00b7 ' + l.orig + ' \u2192 ' + l.dest +
+      (l.eteMin != null ? ' \u00b7 ETE ' + HubTrips.eteText(l.eteMin) : '') + '</option>').join('');
+    legSel.selectedIndex = legIndex(t);
+    updateEte();
+  }
+  function actualFlight(){
+    const st = parseFloat(document.getElementById('hobbsStart').value);
+    const sp = parseFloat(document.getElementById('hobbsStop').value);
+    if(!isNaN(st) && !isNaN(sp) && sp >= st) return { v: Math.round((sp - st) * 1000) / 1000, src: 'Hobbs' };
+    const off = getOOOI('off'), on = getOOOI('on');
+    const h = hoursBetween(off, on);
+    if(h != null) return { v: h, src: 'OOOI' };
+    return null;
+  }
+  function updateEte(){
+    const t = HubTrips.active();
+    if(!t){ return; }
+    const leg = t.legs[legSel.selectedIndex];
+    if(!leg || leg.eteMin == null){ planLine.className = 'check-status idle'; planLine.textContent = 'No ETE on the trip sheet for this leg.'; return; }
+    const planned = leg.eteMin / 60;
+    const limit = parseFloat(thr.value); const lim = isNaN(limit) ? 0.3 : limit;
+    const act = actualFlight();
+    const base = 'Trip sheet ETE ' + HubTrips.eteText(leg.eteMin) + ' (' + fmt1(planned) + ' hr)';
+    if(!act){ planLine.className = 'check-status idle'; planLine.textContent = base + '. Enter Hobbs or OOOI to compare.'; return; }
+    const diff = act.v - planned;
+    if(Math.abs(diff) <= lim + 1e-9){
+      planLine.className = 'check-status ok';
+      planLine.textContent = '\u2713 ' + act.src + ' ' + fmt1(act.v) + ' hr is within ' + fmt1(lim) + ' of ETE (' + HubTrips.eteText(leg.eteMin) + ')';
+    } else if(diff > 0){
+      planLine.className = 'check-status bad';
+      planLine.textContent = act.src + ' ' + fmt1(act.v) + ' hr is ' + fmt1(diff) + ' hr over the ETE (' + HubTrips.eteText(leg.eteMin) + '). Check the times.';
+    } else {
+      planLine.className = 'check-status warn';
+      planLine.textContent = act.src + ' ' + fmt1(act.v) + ' hr is ' + fmt1(-diff) + ' hr under the ETE (' + HubTrips.eteText(leg.eteMin) + '). Check the times.';
+    }
+  }
+  legSel.addEventListener('change', () => { saveLeg(); updateEte(); });
+  thr.addEventListener('input', () => { try { localStorage.setItem('crewhub_hobbs_thr', thr.value); } catch(e){} updateEte(); });
+  document.addEventListener('input', () => setTimeout(updateEte, 0));
+  document.addEventListener('change', () => setTimeout(updateEte, 0));
+  window._hubNextLeg = function(){
+    if(legSel.selectedIndex < legSel.options.length - 1){ legSel.selectedIndex++; saveLeg(); }
+    updateEte();
+  };
+  HubTrips.bar('hobbsTripBar', { onSelect: renderLegs });
+  window.addEventListener('hubtrips', renderLegs);
+  renderLegs();
+}
 </script>
 </body>
 </html>

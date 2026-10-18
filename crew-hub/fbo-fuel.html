@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="pdf.min.js"></script>
+<script src="hub-trips.js"></script>
 <style>
   :root{
     --bg: #0F1A24;
@@ -189,7 +190,7 @@
 </style>
 </head>
 <body>
-<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">FBO &amp; Fuel Release</span><span class="hubver">hub 1.0.0</span></nav>
+<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">FBO &amp; Fuel Release</span><span class="hubver">hub 1.1.0</span></nav>
 <div class="wrap">
 
   <header class="top">
@@ -199,6 +200,8 @@
       <button class="clear-btn" onclick="confirmClear()">Clear all</button>
     </div>
   </header>
+
+  <div id="hubTrip"></div>
 
   <div class="section">
     <h2>Trip basics</h2>
@@ -811,6 +814,19 @@ function clearAll(){
 
 // seed with one arrival card to start
 addArrival();
+
+// ---------- Crew Hub: use the active trip from the Home screen ----------
+let hubBar = null;
+function loadHubTrip(trip){
+  if(!trip) return false;
+  const parsed = parsePdfTripSheet(trip.items);
+  if(!validateLegs(parsed.legs)){ if(hubBar) hubBar.setMessage('Could not read the legs from ' + (trip.tripNum || 'this trip') + '. Re-import it on the Home screen.'); return false; }
+  const ok = applyParsedLegs(parsed.legs);
+  if(ok){ applyExtraTripInfo(trip.items, parsed.paxCounts); if(hubBar) hubBar.setMessage('Loaded ' + (trip.tripNum || 'trip') + ' from the hub. Edit anything below.'); }
+  return ok;
+}
+hubBar = HubTrips.bar('hubTrip', { loadLabel: 'Reload', onLoad: loadHubTrip, onSelect: loadHubTrip });
+if(HubTrips.active()) loadHubTrip(HubTrips.active());
 </script>
 </body>
 </html>
