@@ -105,6 +105,14 @@
   .btn{min-height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--amber);background:transparent;color:var(--amber);font:inherit;font-size:16px;font-weight:600}
   .btn:active{background:#1c1a10}
   .btn[disabled]{opacity:.45;border-color:var(--line);color:var(--dim)}
+  .blank-form{margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:grid;gap:12px}
+  .blank-form[hidden]{display:none}
+  .blank-form label{display:grid;gap:6px;font-size:14px;color:var(--dim)}
+  .blank-form select,.blank-form input{min-height:46px;padding:0 12px;font:inherit;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+  .blank-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .btn.quiet{border-color:var(--line);color:var(--dim)}
+  .trip-att{flex:0 0 auto;padding:0 14px;background:none;border:0;border-left:1px solid var(--line);color:var(--amber);font:inherit;font-size:14px;min-width:78px}
+  .trip-att:active{background:var(--panel-hi)}
   #importMsg{font-size:14px;color:var(--dim);flex:1 1 200px}
   #importMsg.err{color:#ff8a7a}
   #importMsg.ok{color:var(--ok)}
@@ -178,19 +186,30 @@
   <div class="trips" id="tripList"></div>
 
   <h2>Add a trip</h2>
-  <p class="note">Import a trip sheet PDF. You can keep up to 3 trips, each with its own saved work.</p>
+  <p class="note">Import a trip sheet PDF, or start a trip with just an aircraft and date. You can keep up to 3 trips, each with its own saved work.</p>
   <div class="import-row">
     <button type="button" class="btn" id="importBtn">Import trip sheet</button>
+    <button type="button" class="btn" id="blankBtn">Start without a sheet</button>
     <span id="importMsg" role="status" aria-live="polite"></span>
   </div>
+  <form class="blank-form" id="blankForm" hidden>
+    <label>Aircraft
+      <select id="blankTail"><option>N604GW</option><option>N500M</option><option>N109GX</option><option>N999ZG</option></select>
+    </label>
+    <label>Date
+      <input type="date" id="blankDate">
+    </label>
+    <div class="blank-actions"><button type="submit" class="btn">Start trip</button><button type="button" class="btn quiet" id="blankCancel">Cancel</button></div>
+  </form>
   <input type="file" id="tripFile" accept="application/pdf" hidden>
+  <input type="file" id="attachFile" accept="application/pdf" hidden>
 
   <div class="install" id="install">
     <strong>Put it on your Home Screen.</strong> In Safari tap Share, then Add to Home Screen. Open it once with signal so the cockpit tools are saved for offline use.
   </div>
 
   <footer>
-    <span id="ver">Hub 1.3.3</span>
+    <span id="ver">Hub 1.4.0</span>
     <button type="button" id="refresh">Update this copy</button>
   </footer>
 </div>
@@ -199,7 +218,7 @@
 <script src="hub-trips.js"></script>
 <script>
 (function(){
-  var VERSION='1.3.3';
+  var VERSION='1.4.0';
   var st=document.getElementById('status'), tx=document.getElementById('statusText');
   var ready=false;
 
@@ -218,17 +237,18 @@
 
   // ---------- Trips ----------
   var listEl=document.getElementById('tripList'), msgEl=document.getElementById('importMsg');
-  var armed=null, armTimer=null;
+  var armed=null, armTimer=null, attachId=null;
   function esc(t){ return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function renderTrips(){
     var trips=HubTrips.list(), act=HubTrips.active();
-    if(!trips.length){ listEl.innerHTML='<div class="empty">No trips yet. Import a trip sheet PDF and every tool will pick it up.</div>'; }
+    if(!trips.length){ listEl.innerHTML='<div class="empty">No trips yet. Import a trip sheet PDF, or start a trip with just an aircraft and date.</div>'; }
     else listEl.innerHTML=trips.map(function(t){
       var on=act&&act.id===t.id, legs=t.legs.length;
       return '<div class="trip'+(on?' on':'')+'" data-id="'+esc(t.id)+'">'+
         '<button type="button" class="trip-pick" role="radio" aria-checked="'+(on?'true':'false')+'"><span class="radio"></span>'+
         '<span class="t-main"><div class="t-top">'+esc(t.dateLabel)+(t.tail?' \u00b7 '+esc(t.tail):'')+'</div>'+
-        '<div class="t-sub">'+esc(t.route)+(t.tripNum?' \u00b7 '+esc(t.tripNum):'')+'</div></span></button>'+
+        '<div class="t-sub">'+(t.blank?'No trip sheet yet':esc(t.route)+(t.tripNum?' \u00b7 '+esc(t.tripNum):''))+'</div></span></button>'+
+        (t.blank?'<button type="button" class="trip-att" aria-label="Attach a trip sheet to '+esc(t.dateLabel+(t.tail?' '+t.tail:''))+'">Attach sheet</button>':'')+
         '<button type="button" class="trip-x" aria-label="Remove '+esc(t.dateLabel+(t.tail?' '+t.tail:''))+'">Remove</button></div>';
     }).join('');
     document.getElementById('importBtn').disabled = false;
@@ -236,6 +256,7 @@
   listEl.addEventListener('click',function(e){
     var row=e.target.closest('.trip'); if(!row) return;
     var id=row.getAttribute('data-id');
+    if(e.target.closest('.trip-att')){ attachId=id; document.getElementById('attachFile').click(); return; }
     if(e.target.closest('.trip-x')){
       var b=e.target.closest('.trip-x');
       if(armed===id){ clearTimeout(armTimer); armed=null; HubTrips.remove(id); setMsg('Removed.','ok'); renderTrips(); }
@@ -252,6 +273,26 @@
     setMsg('Reading trip sheet\u2026');
     HubTrips.importFile(f).then(function(r){
       if(r.ok){ setMsg((r.replaced?'Updated ':'Imported ')+(r.trip.tripNum||'trip')+'. It is now the active trip.','ok'); }
+      else setMsg(r.message,'err');
+      renderTrips();
+    });
+  });
+  var form=document.getElementById('blankForm'), dateIn=document.getElementById('blankDate');
+  function todayIso(){ var n=new Date(),p=function(x){return (x<10?'0':'')+x;}; return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate()); }
+  document.getElementById('blankBtn').addEventListener('click',function(){ dateIn.value=dateIn.value||todayIso(); form.hidden=!form.hidden; });
+  document.getElementById('blankCancel').addEventListener('click',function(){ form.hidden=true; });
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var r=HubTrips.createBlank(document.getElementById('blankTail').value, dateIn.value||todayIso());
+    if(r.ok){ form.hidden=true; setMsg('Started '+r.trip.dateLabel+' \u00b7 '+r.trip.tail+'. Attach a trip sheet later if you get one.','ok'); }
+    else setMsg(r.message,'err');
+    renderTrips();
+  });
+  document.getElementById('attachFile').addEventListener('change',function(e){
+    var f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f||!attachId) return;
+    setMsg('Reading trip sheet\u2026');
+    HubTrips.attachSheet(attachId,f).then(function(r){
+      if(r.ok) setMsg('Attached trip '+(r.trip.tripNum||'sheet')+'. In each tool tap Refill to pull in the legs.','ok');
       else setMsg(r.message,'err');
       renderTrips();
     });

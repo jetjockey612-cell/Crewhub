@@ -195,6 +195,41 @@
   }
 
 
+  // ---------- Trips without a trip sheet ----------
+  function createBlank(tail, iso){
+    var s = load();
+    if(s.trips.length >= MAX) return { error: 'full', message: 'You already have ' + MAX + ' trips. Remove one first.' };
+    if(!iso){ var n = new Date(); iso = n.getFullYear() + '-' + pad(n.getMonth()+1) + '-' + pad(n.getDate()); }
+    var trip = {
+      id: 'B' + Date.now(), blank: true, tripNum: '', tail: tail || '', model: '', pic: '', sic: '',
+      legs: [], route: '', dateLabel: dateLabel(iso), savedAt: Date.now(), items: [], text: ''
+    };
+    s.trips.push(trip); s.active = trip.id;
+    if(!save(s)) return { error: 'storage', message: 'Could not save on this device (storage full or blocked).' };
+    return { ok: true, trip: trip };
+  }
+  // Put a real trip sheet onto a blank trip. The trip keeps its id, so its saved work stays.
+  async function attachSheet(id, file){
+    var ex;
+    try { ex = await extract(file); }
+    catch(e){ return { error: 'read', message: 'Could not read that PDF.' }; }
+    var sum = parseSummary(ex.items);
+    if(!sum.legs.length) return { error: 'noLegs', message: 'No legs found. Is this a Cook trip sheet?' };
+    var s = load(), t = null;
+    s.trips.forEach(function(x){ if(x.id === id) t = x; });
+    if(!t) return { error: 'gone', message: 'That trip no longer exists.' };
+    if(sum.tripNum && s.trips.some(function(x){ return x.id !== id && x.tripNum === sum.tripNum; }))
+      return { error: 'dup', message: 'Trip ' + sum.tripNum + ' is already imported as another trip.' };
+    var first = sum.legs[0], last = sum.legs[sum.legs.length-1];
+    var label = dateLabel(first.depDate);
+    if(last.arrDate !== first.depDate) label += ' \u2013 ' + dateLabel(last.arrDate);
+    t.blank = false; t.tripNum = sum.tripNum || ''; t.tail = sum.tail || t.tail; t.model = sum.model || '';
+    t.pic = sum.pic || ''; t.sic = sum.sic || ''; t.legs = sum.legs; t.route = routeOf(sum.legs);
+    t.dateLabel = label; t.items = ex.items; t.text = ex.text; t.savedAt = Date.now();
+    if(!save(s)) return { error: 'storage', message: 'Could not save on this device (storage full or blocked).' };
+    return { ok: true, trip: t };
+  }
+
   // ---------- Per-trip saved work for the form-style tools ----------
   function serialize(sec){
     var clone = sec.cloneNode(true);
@@ -272,14 +307,14 @@
     function render(){
       var trips = list(), act = active();
       if(!trips.length){
-        el.innerHTML = '<div class="hb-msg" style="margin:0">No trip imported yet. <a href="index.html">Import a trip sheet on the Home screen</a> and it will show up here.</div>';
+        el.innerHTML = '<div class="hb-msg" style="margin:0">No trip yet. <a href="index.html">Import a trip sheet or start a trip on the Home screen</a> and it will show up here.</div>';
         return;
       }
       el.innerHTML =
         '<div class="hb-row"><span class="hb-l">Trip</span>' +
         '<select aria-label="Active trip">' + trips.map(function(t){
           return '<option value="' + esc(t.id) + '"' + (act && t.id === act.id ? ' selected' : '') + '>' +
-            esc(t.dateLabel + (t.tail ? ' · ' + t.tail : '') + ' · ' + t.route) + '</option>';
+            esc(t.dateLabel + (t.tail ? ' · ' + t.tail : '') + ' · ' + (t.route || 'no trip sheet')) + '</option>';
         }).join('') + '</select>' +
         (opts.onLoad ? '<button type="button">' + esc(opts.loadLabel || 'Load') + '</button>' : '') +
         '</div>' + (opts.hint ? '<div class="hb-msg">' + esc(opts.hint) + '</div>' : '');
@@ -303,6 +338,6 @@
 
   window.HubTrips = {
     MAX: MAX, list: list, active: active, setActive: setActive, remove: remove,
-    importFile: importFile, persist: persist, parseSummary: parseSummary, bar: bar, eteText: eteText, dateLabel: dateLabel
+    importFile: importFile, createBlank: createBlank, attachSheet: attachSheet, persist: persist, parseSummary: parseSummary, bar: bar, eteText: eteText, dateLabel: dateLabel
   };
 })();

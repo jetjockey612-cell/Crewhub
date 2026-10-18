@@ -439,7 +439,7 @@
 </style>
 </head>
 <body>
-<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">International Trip Coordination</span><span class="hubver">hub 1.3.3</span></nav>
+<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">International Trip Coordination</span><span class="hubver">hub 1.4.0</span></nav>
 <div class="wrap">
 
   <header class="top">
@@ -465,6 +465,7 @@
           <option value="N604GW">N604GW</option>
           <option value="N500M">N500M</option>
           <option value="N109GX">N109GX</option>
+          <option value="N999ZG">N999ZG</option>
           <option value="__other">Other…</option>
         </select>
         <input id="tail_other" placeholder="Enter tail number" style="display:none; margin-top:6px;">
@@ -1279,6 +1280,11 @@ addStop();
 let hubBar = null;
 function loadHubTrip(trip){
   if(!trip) return false;
+  if(trip.blank){
+    if(trip.tail) setSelectOrOther('tail', trip.tail);
+    if(hubBar) hubBar.setMessage('No trip sheet yet. Fill this in by hand, or attach a sheet on the Home screen and tap Refill.');
+    return false;
+  }
   const parsed = parsePdfTripSheet(trip.items);
   if(!validateLegs(parsed.legs)){ if(hubBar) hubBar.setMessage('Could not read the legs from this trip. Re-import it on the Home screen.'); return false; }
   const ok = applyParsedLegs(parsed.legs);

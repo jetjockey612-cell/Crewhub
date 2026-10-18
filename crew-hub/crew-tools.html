@@ -803,6 +803,8 @@ function loadState(){
     legs = state.legs;
     // Ensure lbs is consistent
     legs.forEach(l => { l.lbs = (l.gal || 0) * 6.7; });
+    // Older saves stored a typed takeoff on leg 2+ as a plain override; treat it as a target so uplift is calculated
+    legs.forEach((l,i) => { if(i>0 && l.tkoOverride != null && l.tkoOverride !== '' && l.tkoTarget == null && !(l.lbs>0)){ l.tkoTarget = Number(l.tkoOverride); l.tkoOverride = null; } });
 
     if(state.limits){
       limits = state.limits;
@@ -1018,8 +1020,11 @@ function onRouteInput(e){
   }
 
   if(!suppressRecalc) recalc();
-  if(role==='takeoff' && i>0 && legs[i].tkoTarget != null && legs[i].tkoExcess > 0){
-    showToast('Already ' + legs[i].tkoExcess + ' lb above that target. No uplift needed.', true);
+  if(role==='takeoff' && i>0){
+    clearTimeout(onRouteInput._tt);
+    onRouteInput._tt = setTimeout(()=>{
+      if(legs[i].tkoTarget != null && legs[i].tkoExcess > 0) showToast('Already ' + legs[i].tkoExcess + ' lb above that target. No uplift needed.', true);
+    }, 1200);
   }
 }
 
@@ -2387,7 +2392,15 @@ if(window._showView) window._showView(HUB_MODE === 'oooi' ? 'hobbs' : 'fuel');
 if(HUB_MODE === 'fuel' && window.HubTrips){
   function hubLoadLegs(t, auto){
     if(!t) return;
-    const parsed = parseTripSheet(t.text);
+    const parsed = t.blank ? null : parseTripSheet(t.text);
+    if(t.blank){
+      if(t.tail && TAILS.includes(t.tail)){
+        visibleTails = new Set([t.tail]);
+        buildTailToggles(); buildTotalsHead(); buildTotalsTable(); buildPayloadHead(); buildPayloadTable(); buildLimitsGrid(); applyTailVisibility(); recalc(); saveState();
+      }
+      if(!auto) showToast('No trip sheet attached yet. Attach one on the Home screen, then tap Refill.', true);
+      return;
+    }
     if(t.tail && TAILS.includes(t.tail)) parsed.tail = t.tail;
     if(!parsed.legs.length){ if(!auto) showToast('Could not find leg data in this trip', true); return; }
     renderImportPreview(parsed);
@@ -2424,7 +2437,7 @@ if(HUB_MODE === 'oooi' && window.HubTrips){
   }
   function renderLegs(){
     const t = HubTrips.active();
-    if(!t){ planBox.style.display = 'none'; return; }
+    if(!t || !t.legs.length){ planBox.style.display = 'none'; return; }
     planBox.style.display = '';
     legSel.innerHTML = t.legs.map((l, i) =>
       '<option value="' + i + '">Leg ' + (i + 1) + ' \u00b7 ' + l.orig + ' \u2192 ' + l.dest +
@@ -2443,7 +2456,7 @@ if(HUB_MODE === 'oooi' && window.HubTrips){
   }
   function updateEte(){
     const t = HubTrips.active();
-    if(!t){ return; }
+    if(!t || !t.legs.length){ return; }
     const leg = t.legs[legSel.selectedIndex];
     if(!leg || leg.eteMin == null){ planLine.className = 'check-status idle'; planLine.textContent = 'No ETE on the trip sheet for this leg.'; return; }
     const planned = leg.eteMin / 60;
