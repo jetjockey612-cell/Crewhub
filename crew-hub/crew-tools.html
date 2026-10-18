@@ -2191,6 +2191,9 @@ async function extractPdfText(file){
 }
 
 function detectTail(text){
+  // Best source first: the value printed next to the "TAIL NUMBER:" label on the sheet.
+  const lab = text.match(/([A-Z]\d{1,4}[A-Z]{0,2})\s+TAIL NUMBER:/i) || text.match(/TAIL NUMBER:\s*([A-Z]\d{1,4}[A-Z]{0,2})\b/i);
+  if(lab && TAILS.includes(lab[1].toUpperCase())) return lab[1].toUpperCase();
   // Primary: look for one of our known fleet tails anywhere in the extracted text,
   // tolerant of stray whitespace/newlines between characters (PDF text extraction
   // sometimes splits or reorders "label: value" pairs that are adjacent on the page).
@@ -2388,6 +2391,7 @@ if(HUB_MODE === 'fuel' && window.HubTrips){
   function hubLoadLegs(t, auto){
     if(!t) return;
     const parsed = parseTripSheet(t.text);
+    if(t.tail && TAILS.includes(t.tail)) parsed.tail = t.tail;
     if(!parsed.legs.length){ if(!auto) showToast('Could not find leg data in this trip', true); return; }
     renderImportPreview(parsed);
     if(auto){ applyImportedLegs(); }
