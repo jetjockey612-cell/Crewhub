@@ -32,12 +32,28 @@
   body{
     margin:0;background:var(--bg);color:var(--text);
     font-family:"Avenir Next","Avenir",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    padding:calc(28px + env(safe-area-inset-top,0px)) 18px calc(32px + env(safe-area-inset-bottom,0px));
+    padding:0 0 calc(32px + env(safe-area-inset-bottom,0px));
     min-height:100vh;
   }
-  .wrap{max-width:760px;margin:0 auto}
+  .wrap{max-width:760px;margin:0 auto;padding:0 18px}
+  .hero{
+    position:relative;display:flex;align-items:flex-end;margin-bottom:22px;
+    height:calc(66.7vw + 126px);
+    background:
+      linear-gradient(to bottom,rgba(11,18,26,.55) 0,rgba(11,18,26,0) calc(60px + env(safe-area-inset-top,0px))),
+      linear-gradient(to bottom,rgba(11,18,26,0) calc(66.7vw - 90px),var(--bg) 66.7vw),
+      #1a2430 url(hero.jpg) center top/100% auto no-repeat;
+  }
+  .hero-in{width:100%;max-width:760px;margin:0 auto;padding:0 18px 4px}
+  .hero h1,.hero .sub{text-shadow:0 2px 14px rgba(0,0,0,.65)}
+  .hero .sub{color:#c3ceda}
+  @media (min-width:700px){
+    .hero{height:460px;background:
+      linear-gradient(to bottom,rgba(11,18,26,0) 45%,rgba(11,18,26,.75) 80%,var(--bg) 100%),
+      #1a2430 url(hero.jpg) center 30%/cover no-repeat}
+  }
 
-  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:30px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:0}
   h1{margin:0;font-size:40px;line-height:1;font-weight:700;letter-spacing:-.02em}
   .sub{margin:8px 0 0;color:var(--dim);font-size:16px}
   .status{
@@ -119,8 +135,7 @@
 </style>
 </head>
 <body>
-<div class="wrap">
-
+<div class="hero" role="img" aria-label="Three company aircraft on a ramp at sunset"><div class="hero-in">
   <header>
     <div>
       <h1>Crew Hub</h1>
@@ -128,16 +143,15 @@
     </div>
     <div class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">Checking…</span></div>
   </header>
+</div></div>
+<div class="wrap">
 
-  <h2 style="margin-top:0">Trips</h2>
-  <p class="note">Pick a trip. Every tool below opens that trip's own fuel plan, Hobbs times and emails.</p>
-  <div class="trips" id="tripList"></div>
 
-  <h2>In the cockpit</h2>
+  <h2 style="margin-top:0">In the cockpit</h2>
   <p class="note">Saved on this device. Works with no signal.</p>
   <div class="tiles">
     <a class="tile fuel" href="crew-tools.html">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3.2 4 5.5 6.9 5.5 10a5.5 5.5 0 0 1-11 0C6.5 9.9 8.8 7 12 3z"/><path d="M9.5 14a2.6 2.6 0 0 0 2.5 2.4"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="10" height="18" rx="1.5"/><path d="M6.5 8h5M3 21h12M14 7.5h2.2a1.8 1.8 0 0 1 1.8 1.8v6.4a1.5 1.5 0 0 0 3 0V8.3L18.6 5.6"/></svg>
       <span class="top"><span class="name">Fuel burn</span><div class="what">Burn, remaining and per-leg totals</div></span>
     </a>
     <a class="tile hobbs" href="oooi.html">
@@ -151,13 +165,17 @@
   <div class="tiles">
     <a class="tile tcoord" href="trip-coordination.html">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="18" r="2"/><circle cx="18.5" cy="6" r="2"/><path d="M7.4 17.2C12 15.5 8 9 16.6 6.8"/></svg>
-      <span class="top"><span class="name">Trip coordination</span><div class="what">International trip request from your trip sheet</div></span>
+      <span class="top"><span class="name">International trip coordination</span><div class="what">Trip request email built from your trip sheet</div></span>
     </a>
     <a class="tile fbo" href="fbo-fuel.html">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7l8.5 6.2L20.5 7"/></svg>
       <span class="top"><span class="name">FBO &amp; fuel release</span><div class="what">Arrival emails and World Fuel or AvFuel releases</div></span>
     </a>
   </div>
+
+  <h2>Trips</h2>
+  <p class="note">Pick a trip. Every tool above opens that trip's own fuel plan, Hobbs times and emails.</p>
+  <div class="trips" id="tripList"></div>
 
   <h2>Add a trip</h2>
   <p class="note">Import a trip sheet PDF. You can keep up to 3 trips, each with its own saved work.</p>
@@ -172,7 +190,7 @@
   </div>
 
   <footer>
-    <span id="ver">Hub 1.2.1</span>
+    <span id="ver">Hub 1.3.0</span>
     <button type="button" id="refresh">Update this copy</button>
   </footer>
 </div>
@@ -181,7 +199,7 @@
 <script src="hub-trips.js"></script>
 <script>
 (function(){
-  var VERSION='1.2.1';
+  var VERSION='1.3.0';
   var st=document.getElementById('status'), tx=document.getElementById('statusText');
   var ready=false;
 
