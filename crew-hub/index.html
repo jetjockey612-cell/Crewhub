@@ -82,7 +82,7 @@
   .tile svg{width:34px;height:34px;stroke:var(--c);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .tile .name{font-size:22px;font-weight:650;letter-spacing:-.01em;line-height:1.15}
   .tile .what{margin-top:5px;font-size:15px;color:var(--dim);line-height:1.35}
-  .fuel{--c:var(--amber)} .hobbs{--c:var(--sky)} .tcoord{--c:var(--teal)} .fbo{--c:var(--lime)}
+  .fuel{--c:var(--amber)} .hobbs{--c:var(--sky)} .tcoord{--c:var(--teal)} .fbo{--c:var(--lime)} .brake{--c:#ff8a65} .press{--c:#b79cf6}
 
   .tiles.trip-pair .tile{min-height:132px}
 
@@ -181,6 +181,19 @@
     </a>
   </div>
 
+  <h2>Tools</h2>
+  <p class="note">Quick references. Saved on this device and work with no signal.</p>
+  <div class="tiles">
+    <a class="tile brake" href="brake-cooling.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>
+      <span class="top"><span class="name">CL-604 brake cooling</span><div class="what">Turnaround time from the AFM 06-08 charts</div></span>
+    </a>
+    <a class="tile press" href="pressurization.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><path d="M4.5 14h1.5M18 14h1.5M7 8.5l1 1M17 8.5l-1 1M12 6v1.5"/></svg>
+      <span class="top"><span class="name">King Air pressurization</span><div class="what">Controller setting for landing, B300 descent</div></span>
+    </a>
+  </div>
+
   <h2>Trips</h2>
   <p class="note">Pick a trip. Every tool above opens that trip's own fuel plan, Hobbs times and emails.</p>
   <div class="trips" id="tripList"></div>
@@ -209,7 +222,7 @@
   </div>
 
   <footer>
-    <span id="ver">Hub 1.4.0</span>
+    <span id="ver">Hub 1.5.0</span>
     <button type="button" id="refresh">Update this copy</button>
   </footer>
 </div>
@@ -218,7 +231,7 @@
 <script src="hub-trips.js"></script>
 <script>
 (function(){
-  var VERSION='1.4.0';
+  var VERSION='1.5.0';
   var st=document.getElementById('status'), tx=document.getElementById('statusText');
   var ready=false;
 
