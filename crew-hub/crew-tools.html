@@ -491,8 +491,6 @@
       <button type="button" class="hist" id="undoBtn" disabled title="Undo">Undo</button>
       <button type="button" class="hist" id="redoBtn" disabled title="Redo">Redo</button>
       <button type="button" class="hist" id="shareBtn" title="Share plan">Share</button>
-      <button type="button" class="hist" id="importBtn" title="Import trip sheet PDF">Import PDF</button>
-      <input type="file" id="importFile" accept="application/pdf" style="display:none">
       <button class="clear" id="clearBtn">Clear</button>
     </div>
   </header>
@@ -2325,33 +2323,6 @@ function applyImportedLegs(){
   showToast(`Imported ${rows.length} leg${rows.length===1?'':'s'}` + (pendingImport && pendingImport.knownTail ? ` · ${pendingImport.tail} selected` : ''));
   pendingImport = null;
 }
-
-document.getElementById('importBtn').addEventListener('click', () => {
-  document.getElementById('importFile').click();
-});
-
-document.getElementById('importFile').addEventListener('change', async (e) => {
-  const file = e.target.files && e.target.files[0];
-  e.target.value = '';
-  if(!file) return;
-  if(!window.pdfjsLib){
-    showToast('PDF reader failed to load — check your internet connection and try again', true);
-    return;
-  }
-  showToast('Reading trip sheet…');
-  try{
-    const text = await extractPdfText(file);
-    const parsed = parseTripSheet(text);
-    if(!parsed.legs.length){
-      showToast('Could not find leg data in this PDF', true);
-      return;
-    }
-    renderImportPreview(parsed);
-  } catch(err){
-    console.error(err);
-    showToast('Failed to read that PDF', true);
-  }
-});
 
 document.getElementById('importApplyBtn').addEventListener('click', applyImportedLegs);
 document.getElementById('importCancelBtn').addEventListener('click', () => {
