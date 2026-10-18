@@ -1,11 +1,11 @@
 // Crew Hub service worker. Bump VERSION on every release so phones drop old copies.
-const VERSION = '1.5.1';
+const VERSION = '1.5.2';
 const CACHE = 'crew-hub-' + VERSION;
 const CORE = ['./', 'index.html', 'crew-tools.html', 'trip-coordination.html', 'fbo-fuel.html', 'oooi.html','brake-cooling.html','pressurization.html','pressurization-page.jpg','airports.js', 'hub-trips.js', 'hero.jpg',
   'pdf.min.js', 'pdf.worker.min.js', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => fetch(u, { cache: 'reload' }).then(r => { if (!r.ok) throw new Error(u); return c.put(u, r); })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -19,7 +19,7 @@ function networkFirst(req) {
   return new Promise(resolve => {
     let done = false;
     const timer = setTimeout(() => cached().then(r => { if (r && !done) { done = true; resolve(r); } }), 3000);
-    fetch(req).then(res => {
+    fetch(req.url, { cache: 'no-cache' }).then(res => {   // revalidate: GitHub Pages' 10 min browser cache must not serve an old page
       clearTimeout(timer);
       if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       if (!done) { done = true; resolve(res); }
