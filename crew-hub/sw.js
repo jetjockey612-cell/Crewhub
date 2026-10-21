@@ -1,5 +1,5 @@
 // Crew Hub service worker. Bump VERSION on every release so phones drop old copies.
-const VERSION = '1.5.2';
+const VERSION = '1.5.3';
 const CACHE = 'crew-hub-' + VERSION;
 const CORE = ['./', 'index.html', 'crew-tools.html', 'trip-coordination.html', 'fbo-fuel.html', 'oooi.html','brake-cooling.html','pressurization.html','pressurization-page.jpg','airports.js', 'hub-trips.js', 'hero.jpg',
   'pdf.min.js', 'pdf.worker.min.js', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest'];
@@ -32,5 +32,6 @@ function networkFirst(req) {
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
+  if (u.searchParams.has('hubfresh') || /\/ping-\d+\.txt$/.test(u.pathname)) return;   // update + signal checks: never answer from the saved copy
   e.respondWith(networkFirst(e.request));
 });

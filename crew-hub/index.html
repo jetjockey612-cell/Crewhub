@@ -222,7 +222,7 @@
   </div>
 
   <footer>
-    <span id="ver">Hub 1.5.2</span>
+    <span id="ver">Hub 1.5.3</span>
     <button type="button" id="refresh">Update this copy</button>
   </footer>
 </div>
@@ -231,12 +231,26 @@
 <script src="hub-trips.js"></script>
 <script>
 (function(){
-  var VERSION='1.5.2';
+  var VERSION='1.5.3';
   var st=document.getElementById('status'), tx=document.getElementById('statusText');
   var ready=false;
 
+  // navigator.onLine only says the phone thinks it has a connection. Ask the server for real.
+  var reach=null;   // null = not checked yet, true / false = last real check
+  function isOnline(){ return navigator.onLine && reach!==false; }
+  function probe(ms){
+    var ctl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctl) ctl.abort(); },ms||5000);
+    // a page that does not exist still proves the server answered (404). Offline, the request fails.
+    return fetch('ping-'+Date.now()+'.txt',{cache:'no-store',signal:ctl?ctl.signal:undefined})
+      .then(function(){ clearTimeout(to); return true; })
+      .catch(function(){ clearTimeout(to); return false; });
+  }
+  function recheck(){
+    if(!navigator.onLine){ reach=false; paint(); paintRefresh(); return Promise.resolve(false); }
+    return probe(5000).then(function(ok){ reach=ok; paint(); paintRefresh(); return ok; });
+  }
   function paint(){
-    if(!navigator.onLine){
+    if(!isOnline()){
       st.classList.add('offline');
       tx.textContent = ready ? 'Offline · cockpit tools ready' : 'Offline · open once with signal first';
     } else {
@@ -244,7 +258,6 @@
       tx.textContent = ready ? 'Online · saved for offline' : 'Online';
     }
   }
-  window.addEventListener('online',paint); window.addEventListener('offline',paint);
   paint();
 
 
@@ -331,26 +344,56 @@
   document.getElementById('ver').textContent='Hub '+VERSION;
   var refreshBtn=document.getElementById('refresh');
   function paintRefresh(){
-    var off=!navigator.onLine;
+    var off=!isOnline();
     refreshBtn.disabled=off;
     refreshBtn.textContent = off ? 'Update needs signal' : 'Update this copy';
   }
-  window.addEventListener('online',paintRefresh); window.addEventListener('offline',paintRefresh);
   paintRefresh();
+  window.addEventListener('online',recheck); window.addEventListener('offline',recheck);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') recheck(); });
+  setInterval(function(){ if(document.visibilityState==='visible') recheck(); },30000);
+  recheck();
+
+  // Update: fetch every file fresh first. Only when all of them arrive is the saved copy replaced.
+  function say(t,keep){ refreshBtn.textContent=t; if(!keep) setTimeout(paintRefresh,3500); }
+  function timed(url,ms){
+    var ctl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctl) ctl.abort(); },ms);
+    return fetch(url,{cache:'reload',signal:ctl?ctl.signal:undefined}).then(function(r){ clearTimeout(to); return r; },function(e){ clearTimeout(to); throw e; });
+  }
   refreshBtn.addEventListener('click',function(){
-    if(!navigator.onLine){ paintRefresh(); return; }
-    refreshBtn.disabled=true; refreshBtn.textContent='Checking\u2026';
-    // Make sure the server really answers before anything saved is cleared.
-    fetch('index.html?u='+Date.now(),{cache:'no-store'}).then(function(r){
-      if(!r.ok) throw new Error('bad');
-      refreshBtn.textContent='Updating\u2026';
-      return caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })
-        .then(function(){ return navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : []; })
-        .then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); })
+    if(!navigator.onLine){ reach=false; paint(); paintRefresh(); return; }
+    refreshBtn.disabled=true; say('Checking signal\u2026',true);
+    probe(6000).then(function(ok){
+      reach=ok; paint();
+      if(!ok){ say('No signal. Nothing changed.'); return; }
+      say('Downloading\u2026',true);
+      var stamp='?hubfresh='+Date.now();
+      return timed('sw.js'+stamp,15000).then(function(r){
+        if(!r.ok) throw new Error('sw');
+        return r.text();
+      }).then(function(src){
+        var v=/VERSION\s*=\s*'([^']+)'/.exec(src), c=/CORE\s*=\s*\[([\s\S]*?)\]/.exec(src);
+        if(!v||!c) throw new Error('parse');
+        var names=(c[1].match(/'([^']+)'/g)||[]).map(function(s){ return s.slice(1,-1); });
+        return Promise.all(names.map(function(n){
+          return timed(n+(n==='./'?'':stamp),30000).then(function(r){
+            if(!r.ok) throw new Error(n);
+            return r.blob().then(function(b){ return { name:n, res:new Response(b,{status:200,headers:{'Content-Type':r.headers.get('Content-Type')||''}}) }; });
+          });
+        })).then(function(files){ return { name:'crew-hub-'+v[1], files:files }; });
+      });
+    }).then(function(pack){
+      if(!pack) return;
+      say('Saving\u2026',true);
+      return caches.open(pack.name).then(function(cache){
+        return Promise.all(pack.files.map(function(f){ return cache.put(new Request(new URL(f.name,location.href).href),f.res); }));
+      }).then(function(){ return caches.keys(); }).then(function(ks){
+        return Promise.all(ks.filter(function(k){ return k!==pack.name; }).map(function(k){ return caches.delete(k); }));
+      }).then(function(){ return navigator.serviceWorker ? navigator.serviceWorker.getRegistration() : null; })
+        .then(function(reg){ if(reg) return reg.update().catch(function(){}); })
         .then(function(){ location.reload(); });
     }).catch(function(){
-      refreshBtn.textContent='No connection. Nothing changed.';
-      setTimeout(paintRefresh,2500);
+      say('Update failed. Nothing changed.');
     });
   });
 })();
