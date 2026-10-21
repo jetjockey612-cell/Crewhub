@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1119">
+<title>Engine Trend</title>
+<style>
+  :root{color-scheme:dark;--bg:#0a1119;--panel:#111b27;--panel2:#16222f;--line:#243445;--text:#e8eef4;--dim:#8c9aa8;--acc:#f472b6;--acc-dim:#5b2a45;--amber:#ffb300;--ok:#3fb950;--bad:#ff8a7a}
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Avenir Next","Avenir",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding-bottom:calc(48px + env(safe-area-inset-bottom))}
+  .wrap{max-width:560px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+  /* header: PT6 blueprint */
+  .hero{position:relative;background:#0b1520;border-bottom:1px solid var(--line);overflow:hidden;padding-top:calc(66px + env(safe-area-inset-top))}
+  .hero svg.eng{display:block;width:100%;height:auto;max-width:900px;margin:0 auto}
+  .hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:28px;background:linear-gradient(to bottom,rgba(10,17,25,0),var(--bg))}
+  .bar{position:absolute;left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));top:calc(12px + env(safe-area-inset-top));display:flex;align-items:center;z-index:2}
+  .home{display:flex;align-items:center;padding:0 16px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:rgba(17,27,39,.88);color:var(--text);font-weight:600;font-size:15px;text-decoration:none}
+  .home:active{background:#1d2631}
+  .ver{margin-left:auto;font-size:12px;color:var(--dim)}
+  h1{font-size:30px;letter-spacing:-.015em;margin:2px 0 4px}
+  .sub{color:var(--dim);font-size:15px;line-height:1.45;margin:0 0 18px}
+  /* form */
+  .row3{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:18px}
+  @media(min-width:460px){.row3{grid-template-columns:1fr 1fr}}
+  label.f{display:grid;gap:6px;font-size:14px;color:var(--dim)}
+  input,select,textarea{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;width:100%}
+  input,select{min-height:50px;padding:0 12px;font-size:18px}
+  textarea{min-height:92px;padding:12px;font-size:16px;resize:vertical}
+  input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+  input::placeholder{color:#4a5a6a}
+  .grid{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+  .gh,.gr{display:grid;grid-template-columns:minmax(88px,1.05fr) 1fr 1fr;align-items:center}
+  .gh{background:var(--panel2);border-bottom:1px solid var(--line)}
+  .gh div{padding:11px 8px;font-size:14px;font-weight:700;letter-spacing:.06em;text-align:center}
+  .gh div:first-child{text-align:left;padding-left:14px;color:var(--dim);font-weight:600;letter-spacing:0}
+  .gr{border-bottom:1px solid var(--line)}
+  .gr:last-child{border-bottom:0}
+  .gr .n{padding:6px 8px 6px 14px;line-height:1.15}
+  .gr .n b{display:block;font-size:17px;font-weight:650}
+  .gr .n small{font-size:12px;color:var(--dim)}
+  .gr .c{padding:6px 5px}
+  .gr .c input{text-align:center;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;min-height:52px;padding:0 4px}
+  .gr .c.span2{grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .gr .c.span2 label{display:grid;gap:2px;font-size:11px;color:var(--dim);text-align:center}
+  .gr.pair .n{align-self:start;padding-top:12px}
+  input.empty-flag{border-color:var(--amber)}
+  .isa{font-size:13px;color:var(--dim);padding:0 14px 12px;display:none}
+  .isa button{margin-left:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--acc);background:transparent;color:var(--acc);font:inherit;font-size:14px;font-weight:600}
+  .meter{display:flex;align-items:center;gap:10px;margin:14px 2px 0;font-size:14px;color:var(--dim)}
+  .meter i{flex:1;height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+  .meter i b{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+  h2{font-size:17px;margin:24px 0 8px}
+  .acts{display:grid;gap:10px;margin-top:18px}
+  .btn{min-height:54px;border-radius:12px;border:1px solid var(--acc);background:transparent;color:var(--acc);font:inherit;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;text-decoration:none;padding:0 18px}
+  .btn.main{background:var(--acc);color:#1a0a13}
+  .btn:active{opacity:.75}
+  .btn.quiet{border-color:var(--line);color:var(--dim);font-weight:600}
+  .msg{min-height:20px;font-size:14px;margin-top:10px;color:var(--dim);line-height:1.4}
+  .msg.ok{color:var(--ok)} .msg.warn{color:var(--amber)}
+  details{margin-top:22px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  summary{padding:14px 16px;font-size:16px;font-weight:600;min-height:48px;cursor:pointer}
+  details .in{padding:0 16px 16px}
+  details textarea{min-height:84px;font-size:15px}
+  .note{font-size:13px;color:var(--dim);line-height:1.45;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="hero" aria-hidden="true">
+  <svg class="eng" viewBox="0 38 800 168" preserveAspectRatio="xMidYMid meet" role="img">
+    <defs>
+      <pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#1b2c3d" stroke-width=".7"/></pattern>
+      <pattern id="h" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V5" stroke="#3b9fb8" stroke-width=".7" opacity=".6"/></pattern>
+      <linearGradient id="fade" x1="0" x2="1"><stop offset="0" stop-color="#0b1520" stop-opacity="0"/><stop offset=".55" stop-color="#0b1520" stop-opacity="0"/><stop offset="1" stop-color="#0b1520" stop-opacity=".0"/></linearGradient>
+    </defs>
+    <rect x="0" y="38" width="800" height="168" fill="url(#g)"/>
+    <g fill="none" stroke="#4fb3cc" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round" opacity=".9">
+      <!-- centerline -->
+      <path d="M8 118H792" stroke="#2c6f82" stroke-dasharray="14 4 2 4" stroke-width=".9"/>
+      <!-- prop shaft + flange -->
+      <path d="M14 118h34" stroke-width="7" stroke="#5fc6df"/>
+      <rect x="46" y="84" width="9" height="68" rx="2" fill="#0d1a27"/>
+      <!-- reduction gearbox -->
+      <path d="M55 82h92q8 0 8 8v56q0 8-8 8H55z" fill="#0d1a27"/>
+      <circle cx="101" cy="118" r="30"/><circle cx="101" cy="118" r="12"/>
+      <circle cx="101" cy="92" r="9"/><circle cx="101" cy="144" r="9"/>
+      <path d="M101 130v6M101 100v6" stroke-width="1"/>
+      <!-- exhaust stacks -->
+      <path d="M160 88l18-34h18M160 148l18 34h18"/>
+      <path d="M200 54l14 0M200 182l14 0" stroke-width="2.4"/>
+      <!-- gas generator case -->
+      <path d="M155 92h172q16 0 16-18h135q12 0 12 18h62l78 16v20l-78 16h-62q0 18-12 18H343q0-18-16-18H155z" fill="#0d1a27"/>
+      <!-- power shaft -->
+      <path d="M155 118H430" stroke-width="5" stroke="#5fc6df"/>
+      <!-- power turbine discs -->
+      <g fill="#0d1a27"><rect x="262" y="96" width="7" height="44" rx="2"/><rect x="282" y="97" width="7" height="42" rx="2"/></g>
+      <path d="M258 96l-8-6M258 140l-8 6M296 96l8-6M296 140l8 6" stroke-width="1"/>
+      <!-- compressor turbine -->
+      <g fill="#0d1a27"><rect x="314" y="94" width="8" height="48" rx="2"/></g>
+      <path d="M310 94l-8-8M310 142l-8 8M328 94l8-8M328 142l8 8" stroke-width="1"/>
+      <!-- annular combustor (reverse flow) -->
+      <path d="M470 96h-95q-26 0-26 22t26 22h95" stroke-dasharray="3 3"/>
+      <path d="M442 100v-14M418 100v-14M394 100v-14M442 136v14M418 136v14M394 136v14" stroke-width="1"/>
+      <!-- centrifugal impeller -->
+      <path d="M520 96q36 2 44 22q-8 20-44 22" fill="#0d1a27"/>
+      <path d="M526 102q22 4 28 16" stroke-width="1"/>
+      <!-- axial compressor -->
+      <g stroke-width="1.8">
+        <path d="M580 96v-12M580 140v12M602 98v-14M602 138v14M624 100v-14M624 136v14M646 102v-12M646 134v12"/>
+      </g>
+      <path d="M570 118h96" stroke="#5fc6df" stroke-width="4"/>
+      <!-- inlet screen + airflow -->
+      <rect x="684" y="82" width="10" height="72" fill="url(#h)" stroke-width="1"/>
+      <path d="M790 96h-86M790 118h-86M790 140h-86" stroke="#7fe0c1" stroke-width="1.2" stroke-dasharray="6 5"/>
+      <path d="M712 91l-8 5l8 5M712 113l-8 5l8 5M712 135l-8 5l8 5" stroke="#7fe0c1" stroke-width="1.2"/>
+    </g>
+    <!-- callouts -->
+    <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12.5" fill="#8fd3e6" letter-spacing=".04em">
+      <g stroke="#2f7f94" stroke-width=".8" fill="none">
+        <path d="M101 88V62M300 94V52M575 86V52M430 86V62M120 148v34"/>
+      </g>
+      <text x="62" y="58">Np PROP</text>
+      <text x="270" y="48">ITT (T5)</text>
+      <text x="540" y="48">N1 (Ng)</text>
+      <text x="400" y="58">FF</text>
+      <text x="108" y="196">TORQUE / OIL</text>
+      <text x="690" y="70">AIR IN</text>
+    </g>
+  </svg>
+  <div class="bar"><a class="home" href="index.html">Home</a><span class="ver">Hub 1.6.0</span></div>
+</div>
+
+<div class="wrap">
+  <h1>Engine trend</h1>
+  <p class="sub">King Air 350 · PT6A-60A. Fill in the readings and email them to maintenance.</p>
+
+  <div class="row3">
+    <label class="f">Date
+      <input type="date" id="date">
+    </label>
+    <label class="f">Aircraft
+      <select id="tail"><option value="">Choose</option><option>N604GW</option><option>N500M</option><option>N109GX</option><option>N999ZG</option></select>
+    </label>
+    <label class="f" style="grid-column:1/-1">Pilot
+      <input id="pilot" autocomplete="name" placeholder="Your name">
+    </label>
+  </div>
+
+  <div class="grid" id="grid" role="group" aria-label="Engine readings">
+    <div class="gh"><div></div><div>LEFT</div><div>RIGHT</div></div>
+  </div>
+  <div class="meter"><span id="cnt">0 of 20</span><i><b id="bar"></b></i></div>
+
+  <h2>Remarks</h2>
+  <textarea id="rem" placeholder="Anything unusual about the engines, power settings, bleeds or ice protection"></textarea>
+
+  <div class="acts">
+    <a class="btn main" id="mail" href="#" role="button">Email trend sheet</a>
+    <button type="button" class="btn" id="copy">Copy as text</button>
+    <button type="button" class="btn quiet" id="clear">New sheet</button>
+  </div>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+
+  <details>
+    <summary>Recipients</summary>
+    <div class="in">
+      <textarea id="to" aria-label="Recipient email addresses" spellcheck="false" autocapitalize="off"></textarea>
+      <p class="note">One email goes to everyone listed, one address per line. Changes are saved on this device.</p>
+    </div>
+  </details>
+</div>
+
+<script>
+(function(){
+  var DEFAULT_TO=['Brent.Eilers@CookMedical.com','Michael.Sojka@CookMedical.com','Aaron.Bowles@CookMedical.com'];
+  var ROWS=[
+    {k:'itt',  n:'ITT',     u:'°C'},
+    {k:'trq',  n:'Torque',  u:'ft-lb'},
+    {k:'prop', n:'Prop',    u:'rpm'},
+    {k:'n1',   n:'N1',      u:'%'},
+    {k:'ff',   n:'FF',      u:'pph'},
+    {k:'oilp', n:'Oil P',   u:'psi'},
+    {k:'oilt', n:'Oil T',   u:'°C'}
+  ];
+  var PAIRS=[
+    {k:'ias', n:'IAS / Alt', a:['ias','kt'],  b:['alt','ft']},
+    {k:'rat', n:'RAT / TAS', a:['rat','°C'], b:['tas','kt']},
+    {k:'sat', n:'SAT / ISA', a:['sat','°C'], b:['isa','°C dev']}
+  ];
+  var grid=document.getElementById('grid'), q=function(id){ return document.getElementById(id); };
+  var html='';
+  ROWS.forEach(function(r){
+    html+='<div class="gr"><div class="n"><b>'+r.n+'</b><small>'+r.u+'</small></div>'+
+      '<div class="c"><input data-k="'+r.k+'_l" inputmode="decimal" autocomplete="off" aria-label="'+r.n+' left"></div>'+
+      '<div class="c"><input data-k="'+r.k+'_r" inputmode="decimal" autocomplete="off" aria-label="'+r.n+' right"></div></div>';
+  });
+  PAIRS.forEach(function(p){
+    html+='<div class="gr pair"><div class="n"><b>'+p.n+'</b></div><div class="c span2">'+
+      '<label>'+p.a[0].toUpperCase()+' '+p.a[1]+'<input data-k="'+p.a[0]+'" inputmode="decimal" autocomplete="off" aria-label="'+p.a[0]+'"></label>'+
+      '<label>'+p.b[0].toUpperCase()+' '+p.b[1]+'<input data-k="'+p.b[0]+'" inputmode="decimal" autocomplete="off" aria-label="'+p.b[0]+'"></label></div></div>';
+  });
+  html+='<div class="isa" id="isaHint"></div>';
+  grid.insertAdjacentHTML('beforeend',html);
+  var inputs=[].slice.call(grid.querySelectorAll('input[data-k]'));
+  var KEY='crewhub_trend_draft', TOKEY='crewhub_trend_to';
+
+  function todayIso(){ var n=new Date(),p=function(x){return (x<10?'0':'')+x;}; return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate()); }
+  function get(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+  function save(){
+    var o={date:q('date').value,tail:q('tail').value,pilot:q('pilot').value,rem:q('rem').value,v:{}};
+    inputs.forEach(function(i){ if(i.value!=='') o.v[i.getAttribute('data-k')]=i.value; });
+    try{ localStorage.setItem(KEY,JSON.stringify(o)); }catch(e){}
+  }
+  function restore(){
+    var o=get();
+    q('date').value=o.date||todayIso(); q('tail').value=o.tail||''; q('pilot').value=o.pilot||''; q('rem').value=o.rem||'';
+    inputs.forEach(function(i){ var v=(o.v||{})[i.getAttribute('data-k')]; if(v!=null) i.value=v; });
+    var to; try{ to=localStorage.getItem(TOKEY); }catch(e){}
+    q('to').value=(to!=null&&to.trim()?to:DEFAULT_TO.join('\n'));
+  }
+  function val(k){ var e=grid.querySelector('[data-k="'+k+'"]'); return e?e.value.trim():''; }
+  function recipients(){ return q('to').value.split(/[\s,;]+/).filter(function(s){ return /.+@.+\..+/.test(s); }); }
+
+  // ISA deviation from SAT and pressure altitude (standard lapse rate)
+  function isaSuggest(){
+    var sat=parseFloat(val('sat')), alt=parseFloat(val('alt')), h=q('isaHint');
+    if(isNaN(sat)||isNaN(alt)||val('isa')!==''){ h.style.display='none'; h._last=''; return; }
+    var dev=Math.round(sat-(15-1.98*alt/1000));
+    h.style.display='block';
+    var txt='ISA deviation from SAT and altitude: <b>'+(dev>0?'+':'')+dev+'°C</b><button type="button" id="useIsa">Use it</button>';
+    if(h._last!==txt){   // do not rebuild the button while a tap on it is in progress
+      h._last=txt; h.innerHTML=txt;
+      q('useIsa').onclick=function(){ grid.querySelector('[data-k="isa"]').value=String(dev); save(); update(); };
+    }
+  }
+  function missing(){
+    var m=[];
+    ROWS.forEach(function(r){ ['l','r'].forEach(function(s){ if(val(r.k+'_'+s)==='') m.push(r.n+' '+(s==='l'?'left':'right')); }); });
+    PAIRS.forEach(function(p){ [p.a[0],p.b[0]].forEach(function(k){ if(val(k)==='') m.push(k.toUpperCase()); }); });
+    return m;
+  }
+  function update(){
+    var miss=missing(), total=ROWS.length*2+PAIRS.length*2, n=total-miss.length;
+    q('cnt').textContent=n+' of '+total; q('bar').style.width=(n/total*100)+'%';
+    isaSuggest(); buildMail();
+  }
+  function fmtDate(iso){
+    if(!iso) return '';
+    var p=iso.split('-'), M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return M[+p[1]-1]+' '+(+p[2])+', '+p[0];
+  }
+  function dash(s){ return s===''?'--':s; }
+  function body(){
+    var L=[];
+    L.push('King Air engine trend report','');
+    L.push('Aircraft: '+(q('tail').value||'(not selected)'));
+    L.push('Date: '+fmtDate(q('date').value));
+    if(q('pilot').value.trim()) L.push('Pilot: '+q('pilot').value.trim());
+    L.push('');
+    ROWS.forEach(function(r){ L.push(r.n+' ('+r.u+'):  L '+dash(val(r.k+'_l'))+'   R '+dash(val(r.k+'_r'))); });
+    L.push('');
+    L.push('IAS / Alt: '+dash(val('ias'))+' kt / '+dash(val('alt'))+' ft');
+    L.push('RAT / TAS: '+dash(val('rat'))+' °C / '+dash(val('tas'))+' kt');
+    L.push('SAT / ISA dev: '+dash(val('sat'))+' °C / '+dash(val('isa'))+' °C');
+    if(q('rem').value.trim()){ L.push('','Remarks: '+q('rem').value.trim()); }
+    return L.join('\n');
+  }
+  function subject(){ return 'King Air Engine Trend – '+(q('tail').value||'no tail')+' – '+fmtDate(q('date').value); }
+  function buildMail(){
+    var to=recipients();
+    q('mail').href='mailto:'+to.map(encodeURIComponent).join(',').replace(/%40/g,'@')+'?subject='+encodeURIComponent(subject())+'&body='+encodeURIComponent(body());
+  }
+  function say(t,c){ var m=q('msg'); m.textContent=t; m.className='msg'+(c?' '+c:''); }
+
+  q('mail').addEventListener('click',function(e){
+    var m=missing(), problems=[];
+    if(!q('tail').value) problems.push('Choose the aircraft.');
+    if(!recipients().length){ e.preventDefault(); say('Add at least one recipient under Recipients.','warn'); return; }
+    if(m.length){
+      // highlight empty boxes, ask once
+      inputs.forEach(function(i){ i.classList.toggle('empty-flag',i.value.trim()===''); });
+      if(!q('mail')._ok){ e.preventDefault(); q('mail')._ok=true;
+        say((problems.length?problems.join(' ')+' ':'')+m.length+' reading'+(m.length===1?'':'s')+' still empty (outlined in amber). Tap Email again to send as is.','warn'); return; }
+    } else if(problems.length){ e.preventDefault(); say(problems.join(' '),'warn'); return; }
+    q('mail')._ok=false; say('Opening your mail app. One email to '+recipients().length+' people.','ok');
+  });
+  q('copy').addEventListener('click',function(){
+    var t=body(), done=function(){ say('Copied. Paste it into an email or text.','ok'); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done,function(){ fallback(t,done); }); else fallback(t,done);
+  });
+  function fallback(t,done){ var a=document.createElement('textarea'); a.value=t; document.body.appendChild(a); a.select(); try{ document.execCommand('copy'); done(); }catch(e){ say('Could not copy. Use the email button.','warn'); } a.remove(); }
+  q('clear').addEventListener('click',function(){
+    if(!q('clear')._arm){ q('clear')._arm=true; q('clear').textContent='Tap again to clear readings'; setTimeout(function(){ q('clear')._arm=false; q('clear').textContent='New sheet'; },3000); return; }
+    inputs.forEach(function(i){ i.value=''; i.classList.remove('empty-flag'); }); q('rem').value=''; q('date').value=todayIso();
+    q('clear')._arm=false; q('clear').textContent='New sheet'; q('mail')._ok=false; say('Cleared. Aircraft and pilot are kept.'); save(); update();
+  });
+  document.addEventListener('input',function(e){
+    if(e.target===q('to')){ try{ localStorage.setItem(TOKEY,q('to').value); }catch(x){} }
+    if(e.target.classList) e.target.classList.remove('empty-flag');
+    q('mail')._ok=false; save(); update();
+  });
+  document.addEventListener('change',function(){ save(); update(); });
+  restore(); update();
+})();
+</script>
+</body>
+</html>
