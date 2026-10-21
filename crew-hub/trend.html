@@ -131,7 +131,7 @@
       <text x="690" y="70">AIR IN</text>
     </g>
   </svg>
-  <div class="bar"><a class="home" href="index.html">Home</a><span class="ver">Hub 1.6.0</span></div>
+  <div class="bar"><a class="home" href="index.html">Home</a><span class="ver">Hub 1.6.1</span></div>
 </div>
 
 <div class="wrap">
@@ -143,7 +143,7 @@
       <input type="date" id="date">
     </label>
     <label class="f">Aircraft
-      <select id="tail"><option value="">Choose</option><option>N604GW</option><option>N500M</option><option>N109GX</option><option>N999ZG</option></select>
+      <select id="tail"><option>N999ZG</option></select>
     </label>
     <label class="f" style="grid-column:1/-1">Pilot
       <input id="pilot" autocomplete="name" placeholder="Your name">
@@ -217,7 +217,7 @@
   }
   function restore(){
     var o=get();
-    q('date').value=o.date||todayIso(); q('tail').value=o.tail||''; q('pilot').value=o.pilot||''; q('rem').value=o.rem||'';
+    q('date').value=o.date||todayIso(); q('tail').value='N999ZG'; q('pilot').value=o.pilot||''; q('rem').value=o.rem||'';
     inputs.forEach(function(i){ var v=(o.v||{})[i.getAttribute('data-k')]; if(v!=null) i.value=v; });
     var to; try{ to=localStorage.getItem(TOKEY); }catch(e){}
     q('to').value=(to!=null&&to.trim()?to:DEFAULT_TO.join('\n'));
