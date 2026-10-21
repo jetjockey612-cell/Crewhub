@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<title>Fuel Uplift</title>
+<style>
+  :root{color-scheme:dark;--bg:#0d1117;--panel:#151d28;--panel2:#1b2635;--line:#243140;--text:#e8eef4;--dim:#8c9aa8;--acc:#34d399;--acc-dim:#16503d;--amber:#ffb300}
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Avenir Next","Avenir",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+  .wrap{max-width:560px;margin:0 auto}
+  .bar{display:flex;gap:10px;align-items:center;margin:8px 0 16px}
+  .home{display:flex;align-items:center;padding:0 16px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font-weight:600;font-size:15px;text-decoration:none}
+  .home:active{background:#1d2631}
+  .ver{margin-left:auto;font-size:12px;color:var(--dim)}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:15px;line-height:1.45;margin:0 0 18px}
+  h2{font-size:17px;margin:28px 0 8px}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+  .seg button{min-height:48px;border:0;border-right:1px solid var(--line);background:transparent;color:var(--dim);font:inherit;font-size:16px;font-weight:650;cursor:pointer}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed="true"]{background:var(--acc-dim);color:var(--acc)}
+  .seg button:focus-visible{outline:3px solid var(--acc);outline-offset:-3px}
+  .lbl{font-size:14px;color:var(--dim);margin:0 0 6px}
+  .in{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+  label.f{display:grid;gap:6px;font-size:14px;color:var(--dim)}
+  input,select{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;width:100%;min-height:54px;padding:0 12px;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+  select{font-size:18px}
+  input:focus-visible,select:focus-visible,summary:focus-visible,.btn:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+  input::placeholder{color:#4a5a6a}
+  .res{margin-top:6px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+  .res.on{border-color:var(--acc-dim)}
+  .res .k{font-size:14px;color:var(--dim)}
+  .res .big{font-size:56px;font-weight:800;line-height:1.1;margin:4px 0 4px;font-variant-numeric:tabular-nums}
+  .res .big small{font-size:22px;font-weight:650;color:var(--dim);margin-left:8px}
+  .res .how{font-size:15px;line-height:1.5}
+  .res .warn{color:var(--amber)}
+  .others{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .others div{padding:10px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);text-align:center}
+  .others b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+  .others span{font-size:13px;color:var(--dim)}
+  .btn{margin-top:12px;min-height:50px;width:100%;border-radius:12px;border:1px solid var(--acc);background:transparent;color:var(--acc);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .btn:active{opacity:.7}
+  .msg{min-height:20px;font-size:14px;color:var(--dim);margin-top:8px}
+  details{margin-top:24px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  summary{padding:14px 16px;font-size:16px;font-weight:600;min-height:48px;cursor:pointer}
+  details .in2{padding:0 16px 16px}
+  .note{font-size:13px;color:var(--dim);line-height:1.45;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"><a class="home" href="index.html">Home</a><span class="ver">Hub 1.7.0</span></div>
+  <h1>Fuel uplift</h1>
+  <p class="sub">How much to order, with pounds, gallons, liters and kilograms side by side.</p>
+
+  <p class="lbl">Show the answer in</p>
+  <div class="seg" id="showSeg" role="group" aria-label="Show answer in">
+    <button type="button" data-u="lb" aria-pressed="true">lb</button>
+    <button type="button" data-u="gal" aria-pressed="false">gal</button>
+    <button type="button" data-u="l" aria-pressed="false">Liters</button>
+    <button type="button" data-u="kg" aria-pressed="false">kg</button>
+  </div>
+
+  <h2>Uplift to reach a target</h2>
+  <p class="lbl">Type the fuel quantities in</p>
+  <div class="seg" id="inSeg" role="group" aria-label="Unit for fuel on board and target">
+    <button type="button" data-u="lb" aria-pressed="true">lb</button>
+    <button type="button" data-u="kg" aria-pressed="false">kg</button>
+  </div>
+  <div class="in">
+    <label class="f">Fuel on board <span id="u1">(lb)</span>
+      <input id="onb" inputmode="decimal" autocomplete="off" placeholder="1890">
+    </label>
+    <label class="f">Want on board <span id="u2">(lb)</span>
+      <input id="tgt" inputmode="decimal" autocomplete="off" placeholder="2700">
+    </label>
+  </div>
+  <div class="res" id="res" role="status" aria-live="polite">
+    <div class="k">Uplift needed</div>
+    <div class="big" id="big">&ndash;</div>
+    <div class="how" id="how">Enter what is on board and what you want.</div>
+    <div class="others" id="others" hidden></div>
+    <button type="button" class="btn" id="copy" hidden>Copy uplift for the fueler</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <h2>Convert any amount</h2>
+  <div class="in">
+    <label class="f">Amount
+      <input id="amt" inputmode="decimal" autocomplete="off" placeholder="500">
+    </label>
+    <label class="f">Unit
+      <select id="amtU"><option value="gal">US gallons</option><option value="l">Liters</option><option value="lb">Pounds</option><option value="kg">Kilograms</option></select>
+    </label>
+  </div>
+  <div class="others" id="conv" hidden></div>
+
+  <details>
+    <summary>Fuel density</summary>
+    <div class="in2">
+      <label class="f">Pounds per US gallon
+        <input id="den" inputmode="decimal" autocomplete="off" value="6.7">
+      </label>
+      <p class="note">6.7 lb/gal is the figure the fuel burn calculator uses for Jet A. Change it if a fueler quotes a different density. Liters use 3.78541 L per US gallon and kilograms use 2.20462 lb per kg.</p>
+    </div>
+  </details>
+</div>
+<script>
+(function(){
+  var L_PER_GAL=3.78541, LB_PER_KG=2.20462;
+  var $=function(id){ return document.getElementById(id); };
+  var showU='lb', inU='lb';
+  var den=$('den');
+  try{ var d=parseFloat(localStorage.getItem('crewhub_uplift_den')); if(d>5&&d<8) den.value=String(d); }catch(e){}
+  function density(){ var d=parseFloat(den.value); return (d>5&&d<8)?d:6.7; }
+  // everything goes through pounds
+  function toLb(v,u){ return u==='lb'?v:u==='kg'?v*LB_PER_KG:u==='gal'?v*density():v/L_PER_GAL*density(); }
+  function fromLb(lb,u){ return u==='lb'?lb:u==='kg'?lb/LB_PER_KG:u==='gal'?lb/density():lb/density()*L_PER_GAL; }
+  var NAME={lb:'lb',kg:'kg',gal:'gal',l:'L'}, DEC={lb:0,kg:0,gal:1,l:0};
+  function fmt(v,u){ var n=Number(v.toFixed(DEC[u])); return n.toLocaleString('en-US',{minimumFractionDigits:DEC[u]===1&&n%1?1:0,maximumFractionDigits:DEC[u]}); }
+  var ORDER=['lb','gal','l','kg'];
+  function tiles(lb,skip){
+    return ORDER.filter(function(u){ return u!==skip; }).map(function(u){ return '<div><b>'+fmt(fromLb(lb,u),u)+'</b><span>'+(u==='gal'?'US gal':u==='l'?'Liters':u)+'</span></div>'; }).join('');
+  }
+  var lastText='';
+  function calc(){
+    var a=parseFloat($('onb').value), b=parseFloat($('tgt').value);
+    var res=$('res'), big=$('big'), how=$('how'), oth=$('others'), cp=$('copy');
+    res.classList.remove('on'); oth.hidden=true; cp.hidden=true; $('msg').textContent='';
+    if(isNaN(a)||isNaN(b)){ big.innerHTML='&ndash;'; how.textContent='Enter what is on board and what you want.'; return; }
+    var need=toLb(b,inU)-toLb(a,inU);
+    if(need<=0){
+      big.innerHTML='0<small>'+NAME[showU]+'</small>';
+      how.innerHTML='<span class="warn">Already '+fmt(fromLb(-need,inU),inU)+' '+NAME[inU]+' at or above the target. No uplift needed.</span>';
+      return;
+    }
+    res.classList.add('on');
+    // Fuelers order in gallons: round to the nearest 5, and show the other units for what that gives
+    var gal=fromLb(need,'gal'), galR=Math.round(gal/5)*5, lbR=toLb(galR,'gal');
+    if(galR===0){
+      big.innerHTML='0<small>'+NAME[showU]+'</small>';
+      how.innerHTML='<span class="warn">Only '+fmt(gal,'gal')+' gal needed, under the 5 gal step. No uplift.</span>';
+      res.classList.remove('on'); return;
+    }
+    big.innerHTML=fmt(fromLb(lbR,showU),showU)+'<small>'+(showU==='l'?'liters':showU==='gal'?'US gal':showU)+'</small>';
+    var after=toLb(parseFloat($('onb').value),inU)+lbR;
+    how.innerHTML='Exact need '+fmt(need,'lb')+' lb ('+fmt(gal,'gal')+' gal), rounded to <b>'+galR+' gal</b>.<br>That puts about '+fmt(fromLb(after,inU),inU)+' '+NAME[inU]+' on board (target '+fmt(parseFloat($('tgt').value),inU)+').';
+    oth.innerHTML=tiles(lbR,showU); oth.hidden=false;
+    lastText='Fuel uplift: '+galR+' US gal / '+fmt(lbR,'lb')+' lb / '+fmt(fromLb(lbR,'l'),'l')+' L / '+fmt(fromLb(lbR,'kg'),'kg')+' kg';
+    cp.hidden=false;
+  }
+  function conv(){
+    var v=parseFloat($('amt').value), c=$('conv');
+    if(isNaN(v)||v<0){ c.hidden=true; return; }
+    var u=$('amtU').value, lb=toLb(v,u);
+    c.innerHTML=tiles(lb,u); c.hidden=false;
+  }
+  function seg(id,fn){
+    $(id).addEventListener('click',function(e){
+      var b=e.target.closest('button[data-u]'); if(!b) return;
+      [].forEach.call($(id).querySelectorAll('button'),function(x){ x.setAttribute('aria-pressed',x===b?'true':'false'); });
+      fn(b.getAttribute('data-u'));
+    });
+  }
+  seg('showSeg',function(u){ showU=u; calc(); });
+  seg('inSeg',function(u){ inU=u; $('u1').textContent='('+u+')'; $('u2').textContent='('+u+')'; calc(); });
+  ['onb','tgt'].forEach(function(id){ $(id).addEventListener('input',calc); });
+  $('amt').addEventListener('input',conv); $('amtU').addEventListener('change',conv);
+  den.addEventListener('input',function(){ try{ localStorage.setItem('crewhub_uplift_den',String(density())); }catch(e){} calc(); conv(); });
+  $('copy').addEventListener('click',function(){
+    var done=function(){ $('msg').textContent='Copied.'; };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(lastText).then(done,function(){ $('msg').textContent='Could not copy.'; });
+    else { var t=document.createElement('textarea'); t.value=lastText; document.body.appendChild(t); t.select(); try{ document.execCommand('copy'); done(); }catch(e){} t.remove(); }
+  });
+  calc(); conv();
+})();
+</script>
+</body>
+</html>

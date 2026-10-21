@@ -82,7 +82,7 @@
   .tile svg{width:34px;height:34px;stroke:var(--c);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .tile .name{font-size:22px;font-weight:650;letter-spacing:-.01em;line-height:1.15}
   .tile .what{margin-top:5px;font-size:15px;color:var(--dim);line-height:1.35}
-  .fuel{--c:var(--amber)} .hobbs{--c:var(--sky)} .tcoord{--c:var(--teal)} .fbo{--c:var(--lime)} .brake{--c:#ff8a65} .press{--c:#b79cf6} .trend{--c:#f472b6}
+  .fuel{--c:var(--amber)} .hobbs{--c:var(--sky)} .tcoord{--c:var(--teal)} .fbo{--c:var(--lime)} .brake{--c:#ff8a65} .press{--c:#b79cf6} .trend{--c:#f472b6} .uplift{--c:#34d399}
 
   .tiles.trip-pair .tile{min-height:132px}
 
@@ -215,6 +215,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><path d="M4.5 14h1.5M18 14h1.5M7 8.5l1 1M17 8.5l-1 1M12 6v1.5"/></svg>
       <span class="top"><span class="name">King Air pressurization</span><div class="what">Controller setting for landing, B300 descent</div></span>
     </a>
+    <a class="tile uplift" href="uplift.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3.2 4 5.5 6.6 5.5 10a5.5 5.5 0 0 1-11 0C6.5 9.6 8.8 7 12 3z"/><path d="M12 17v-5M9.8 14l2.2-2.2 2.2 2.2"/></svg>
+      <span class="top"><span class="name">Fuel uplift</span><div class="what">Pounds, gallons and liters to order</div></span>
+    </a>
     <a class="tile trend" href="trend.html">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M3 20V5"/><path d="M6 15l4-4 3 3 5-7"/><circle cx="18" cy="7" r="1.2"/></svg>
       <span class="top"><span class="name">King Air engine trend</span><div class="what">Trend readings emailed to maintenance</div></span>
@@ -226,7 +230,7 @@
   </div>
 
   <footer>
-    <span id="ver">Hub 1.6.1</span>
+    <span id="ver">Hub 1.7.0</span>
     <button type="button" id="refresh">Update this copy</button>
   </footer>
 </div>
@@ -235,7 +239,7 @@
 <script src="hub-trips.js"></script>
 <script>
 (function(){
-  var VERSION='1.6.1';
+  var VERSION='1.7.0';
   var st=document.getElementById('status'), tx=document.getElementById('statusText');
   var ready=false;
 
