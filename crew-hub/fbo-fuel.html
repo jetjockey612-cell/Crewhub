@@ -131,6 +131,15 @@
     font-family: var(--font-mono); font-size: 13.5px; border-radius: 3px; cursor: pointer;
   }
   .email-btn:hover{ background: var(--amber); color: #1A1204; }
+  .email-card.sent{ border-color: #2f6b3b; }
+  .email-card.sent .etitle::after{ content: "  \2713 Sent"; color: #3fb950; font-size: 13px; }
+  .email-card.sent textarea{ opacity: .55; }
+  .email-card.flash{ box-shadow: 0 0 0 2px var(--amber); }
+  .sentbar{ margin: 0 0 12px; padding: 12px 14px; border: 1px solid var(--amber); border-radius: 4px; background: #1a1508; }
+  .sentbar p{ margin: 0 0 10px; font-size: 15px; }
+  .sentbar .row{ display: flex; gap: 10px; flex-wrap: wrap; }
+  .sentbar button{ min-height: 48px; padding: 0 18px; border-radius: 4px; border: 1px solid var(--amber); background: transparent; color: var(--amber); font-family: var(--font-mono); font-size: 15px; cursor: pointer; }
+  .sentbar button.yes{ background: var(--amber); color: #1A1204; font-weight: 700; }
   .email-card textarea{
     width: 100%; min-height: 220px; background: var(--panel-raised); border: 1px solid var(--line);
     color: var(--text); font-family: var(--font-mono); font-size: 15px; line-height: 1.6;
@@ -190,7 +199,7 @@
 </style>
 </head>
 <body>
-<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">FBO &amp; Fuel Release</span><span class="hubver">hub 1.7.0</span></nav>
+<nav class="hubbar"><a href="index.html" aria-label="Back to Crew Hub">&#8249; Home</a><span class="hubname">FBO &amp; Fuel Release</span><span class="hubver">hub 1.7.1</span></nav>
 <div class="wrap">
 
   <header class="top">
@@ -799,11 +808,13 @@ function copyCard(cardId){
     setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
   });
 }
+let pendingCard = null, pendingAt = 0;
 function emailCard(cardId, to, subject){
   const body = encodeURIComponent(document.getElementById(cardId).value);
   const subj = encodeURIComponent(subject);
   const toPart = to ? to.trim() : '';
   const url = `mailto:${toPart}?subject=${subj}&body=${body}`;
+  pendingCard = cardId; pendingAt = Date.now();
   const a = document.createElement('a');
   a.href = url;
   a.style.display = 'none';
@@ -811,6 +822,38 @@ function emailCard(cardId, to, subject){
   a.click();
   document.body.removeChild(a);
 }
+// Your mail app cannot hand control back to a web page, so when you switch back we ask once whether it went out
+function cardOf(cardId){ const t = document.getElementById(cardId); return t ? t.closest('.email-card') : null; }
+function updateSentCount(){
+  const all = document.querySelectorAll('#emailCards .email-card'), done = document.querySelectorAll('#emailCards .email-card.sent');
+  const el = document.getElementById('outputCount');
+  if(!all.length) return;
+  el.textContent = done.length === all.length ? `All ${all.length} sent \u2713` : (done.length ? `${done.length} of ${all.length} sent` : `${all.length} email${all.length===1?'':'s'} generated`);
+}
+function askSent(cardId){
+  const card = cardOf(cardId); if(!card || card.classList.contains('sent') || card.querySelector('.sentbar')) return;
+  const bar = document.createElement('div');
+  bar.className = 'sentbar';
+  bar.innerHTML = '<p>Back from your mail app. Did this one go out?</p><div class="row"><button type="button" class="yes">Yes, sent</button><button type="button" class="no">Not yet</button></div>';
+  card.insertBefore(bar, card.firstChild);
+  bar.querySelector('.yes').addEventListener('click', () => markSent(cardId));
+  bar.querySelector('.no').addEventListener('click', () => bar.remove());
+  card.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function markSent(cardId){
+  const card = cardOf(cardId); if(!card) return;
+  const bar = card.querySelector('.sentbar'); if(bar) bar.remove();
+  card.classList.add('sent');
+  const eb = card.querySelector('.email-btn'); if(eb) eb.textContent = 'Email again';
+  updateSentCount();
+  const next = [...document.querySelectorAll('#emailCards .email-card')].find(c => !c.classList.contains('sent'));
+  if(next){ next.classList.add('flash'); next.scrollIntoView({behavior:'smooth', block:'start'}); setTimeout(() => next.classList.remove('flash'), 1800); }
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && pendingCard && Date.now() - pendingAt > 1500){
+    const id = pendingCard; pendingCard = null; askSent(id);
+  }
+});
 
 function confirmClear(){ document.getElementById('confirmOverlay').classList.add('show'); }
 function hideConfirm(){ document.getElementById('confirmOverlay').classList.remove('show'); }
